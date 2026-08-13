@@ -25,7 +25,7 @@
     root.innerHTML = '<div class="boutique-categories" data-el="categories"></div><div class="boutique-grid" data-el="grid"></div>';
 
     const fab = document.createElement('button');
-    fab.className = 'boutique-cart-fab';
+    fab.className = 'boutique boutique-cart-fab';
     fab.innerHTML = 'Panier <span class="boutique-cart-count" data-el="cart-count">0</span>';
     fab.addEventListener('click', openCart);
     document.body.appendChild(fab);
