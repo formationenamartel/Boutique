@@ -156,3 +156,4 @@ Fonctionnement : quand un client clique sur « Passer la commande », la quantit
 ## Aller plus loin (suggestions restantes)
 
 - **Suivi des commandes** : pour l'instant, tout le suivi se fait depuis le Dashboard Stripe. Un webhook Stripe supplémentaire permettrait d'automatiser d'autres actions après paiement (email personnalisé, mise à jour d'un tableau de commandes, etc.) si besoin plus tard.
+
