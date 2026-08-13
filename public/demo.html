@@ -16,7 +16,9 @@
   <p class="lead">Ceci est une page de démonstration montrant comment intégrer le widget boutique dans un site existant.</p>
 
   <!--
-    Pour intégrer la boutique dans une de vos pages, copiez le bloc ci-dessous.
+    Pour intégrer la boutique dans une de vos AUTRES pages (sur un autre site), copiez le bloc
+    ci-dessous en remplaçant les URLs relatives par les URLs complètes de ce déploiement, ex :
+    data-api-url="https://boutique-one-xi.vercel.app/api/create-checkout-session"
     - data-products-url : URL publique de votre products.json (hébergé avec vos images)
     - data-api-url       : URL de la fonction Stripe déployée sur Vercel
     - data-stock-url     : (optionnel) URL de l'endpoint de lecture de stock, si vous avez activé
@@ -25,8 +27,8 @@
   <div
     data-boutique-root
     data-products-url="products.json"
-    data-api-url="https://VOTRE-PROJET.vercel.app/api/create-checkout-session"
-    data-stock-url="https://VOTRE-PROJET.vercel.app/api/stock"
+    data-api-url="/api/create-checkout-session"
+    data-stock-url="/api/stock"
   ></div>
 
   <script src="boutique.js"></script>
