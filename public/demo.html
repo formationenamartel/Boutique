@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Démo boutique</title>
+  <link rel="stylesheet" href="boutique.css">
+  <style>
+    body { max-width: 1100px; margin: 0 auto; padding: 40px 20px; }
+    h1 { margin-bottom: 4px; }
+    p.lead { color: #6b7280; margin-top: 0; }
+  </style>
+</head>
+<body>
+  <h1>Notre boutique</h1>
+  <p class="lead">Ceci est une page de démonstration montrant comment intégrer le widget boutique dans un site existant.</p>
+
+  <!--
+    Pour intégrer la boutique dans une de vos pages, copiez le bloc ci-dessous.
+    - data-products-url : URL publique de votre products.json (hébergé avec vos images)
+    - data-api-url       : URL de la fonction Stripe déployée sur Vercel
+    - data-stock-url     : (optionnel) URL de l'endpoint de lecture de stock, si vous avez activé
+                            le suivi de stock (Vercel KV). Omettez cet attribut sinon.
+  -->
+  <div
+    data-boutique-root
+    data-products-url="products.json"
+    data-api-url="https://VOTRE-PROJET.vercel.app/api/create-checkout-session"
+    data-stock-url="https://VOTRE-PROJET.vercel.app/api/stock"
+  ></div>
+
+  <script src="boutique.js"></script>
+</body>
+</html>

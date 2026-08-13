@@ -1,0 +1,158 @@
+# Boutique en ligne — intégrable avec Stripe
+
+Ce projet vous donne trois choses :
+
+1. **`public/`** — le widget boutique (HTML/CSS/JS) que vous intégrez dans vos sites : grille produits, filtres par catégorie, panier, paiement.
+2. **`admin/index.html`** — une page d'administration à ouvrir dans votre navigateur pour gérer produits, catégories et images, sans rien installer.
+3. **`api/`** — de petites fonctions serveur (déployées gratuitement sur [Vercel](https://vercel.com)) : `create-checkout-session.js` crée la session de paiement Stripe de façon sécurisée, et `stock.js` / `stock-adjust.js` / `webhook.js` gèrent le suivi de stock optionnel (section 8). C'est la seule pièce "backend", et elle est **partagée par tous vos sites**.
+
+Pourquoi une fonction serveur est nécessaire : pour un panier avec plusieurs produits payés en une seule fois, Stripe doit connaître les prix exacts. Il ne faut **jamais** faire confiance aux prix envoyés par le navigateur (n'importe qui pourrait les modifier avant l'envoi) — la fonction relit donc les vrais prix dans votre `products.json` avant de créer le paiement.
+
+---
+
+## 1. Préparer votre compte Stripe
+
+1. Connectez-vous sur [dashboard.stripe.com](https://dashboard.stripe.com).
+2. Récupérez votre **clé secrète** (`Développeurs > Clés API > Clé secrète`), commençant par `sk_test_...` (mode test) ou `sk_live_...` (mode production).
+3. Ne partagez jamais cette clé et ne la mettez jamais dans du code HTML/JS visible publiquement — elle ne doit exister que côté serveur (voir étape 3).
+
+## 2. Déployer votre catalogue et le widget
+
+Le dossier `public/` contient un exemple fonctionnel (`products.json`, `boutique.css`, `boutique.js`, 4 produits de démo). Deux options :
+
+- **Option simple** : déployez tout le dossier `public/` tel quel sur votre hébergement (à la racine ou dans un sous-dossier `/boutique`), puis intégrez le widget dans vos autres pages en pointant vers cette URL.
+- **Option recommandée si vous ne savez pas encore où héberger** : déployez tout ce dépôt (y compris `api/`) sur Vercel en une fois (voir étape 3) — `public/` sera alors servi automatiquement par Vercel, et vos autres sites n'auront qu'à appeler cette même adresse.
+
+Une fois hébergé, notez l'URL publique de votre `products.json`, par exemple :
+`https://boutique-xyz.vercel.app/products.json`
+
+## 3. Déployer la fonction de paiement sur Vercel
+
+1. Créez un compte gratuit sur [vercel.com](https://vercel.com).
+2. Installez leur CLI ou connectez ce dossier à un dépôt Git (GitHub/GitLab) puis importez-le dans Vercel — les deux fonctionnent.
+3. Dans les paramètres du projet Vercel, ajoutez ces **variables d'environnement** :
+
+   | Variable | Exemple | Description |
+   |---|---|---|
+   | `STRIPE_SECRET_KEY` | `sk_live_...` | Votre clé secrète Stripe (étape 1) |
+   | `PRODUCTS_JSON_URL` | `https://boutique-xyz.vercel.app/products.json` | URL publique de votre catalogue |
+   | `ALLOWED_ORIGINS` | `https://monsite.com,https://autresite.com` | Domaines de vos sites autorisés à appeler l'API (séparés par des virgules) |
+   | `DEFAULT_SUCCESS_URL` | `https://monsite.com/merci` | Page affichée après un paiement réussi (si le site appelant n'en fournit pas une valide) |
+   | `DEFAULT_CANCEL_URL` | `https://monsite.com/boutique` | Page affichée si le client annule |
+   | `SHIP_TO_COUNTRIES` *(optionnel)* | `CA,US` | Si vous vendez des produits physiques, pays de livraison acceptés par Stripe |
+   | `ENABLE_AUTOMATIC_TAX` *(optionnel)* | `true` | Active le calcul automatique de la TVA/taxes via Stripe Tax (voir section 7) |
+   | `STRIPE_WEBHOOK_SECRET` *(optionnel)* | `whsec_...` | Requis uniquement si vous activez le suivi de stock (voir section 8) |
+   | `ADMIN_STOCK_TOKEN` *(optionnel)* | une chaîne aléatoire longue | Requis uniquement si vous activez le suivi de stock (voir section 8) |
+
+4. Déployez. Vous obtenez une URL du type `https://votre-projet.vercel.app/api/create-checkout-session` — c'est l'URL `data-api-url` à utiliser dans le widget.
+
+**Important** : tant que `ALLOWED_ORIGINS` n'est pas défini, l'API accepte les appels de n'importe quel site (pratique pour tester, à éviter en production).
+
+## 4. Intégrer le widget dans vos pages
+
+Copiez ce bloc dans n'importe laquelle de vos pages HTML (voir aussi `public/demo.html`) :
+
+```html
+<link rel="stylesheet" href="https://votre-projet.vercel.app/boutique.css">
+
+<div
+  data-boutique-root
+  data-products-url="https://votre-projet.vercel.app/products.json"
+  data-api-url="https://votre-projet.vercel.app/api/create-checkout-session"
+></div>
+
+<script src="https://votre-projet.vercel.app/boutique.js"></script>
+```
+
+Vous pouvez placer plusieurs de ces blocs sur des sites différents : ils pointent tous vers le même catalogue et la même API.
+
+Personnalisation visuelle : les couleurs sont pilotées par des variables CSS (`--boutique-primary`, `--boutique-accent`, etc.) sur la classe `.boutique` — surchargez-les dans le CSS de votre site si besoin.
+
+## 5. Gérer vos produits au quotidien
+
+1. Ouvrez `admin/index.html` directement dans votre navigateur (double-clic, aucune installation).
+2. Ajoutez vos catégories, puis vos produits (nom, description, prix, image, catégorie).
+3. Vos modifications sont sauvegardées automatiquement dans votre navigateur pendant que vous travaillez (brouillon local).
+4. Cliquez sur **Exporter (ZIP)** : vous obtenez `boutique-export.zip` contenant `products.json` et le dossier `images/`.
+5. Décompressez et remplacez les fichiers correspondants sur votre hébergement (dans `public/`).
+6. Pour continuer à modifier plus tard, utilisez **Importer un ZIP existant** avec votre dernier export.
+
+## 6. Tester avant de passer en production
+
+1. Utilisez d'abord votre clé Stripe **de test** (`sk_test_...`) dans `STRIPE_SECRET_KEY`.
+2. Passez une commande sur votre site avec une [carte de test Stripe](https://docs.stripe.com/testing), par exemple `4242 4242 4242 4242`, une date future, et n'importe quel CVC.
+3. Vérifiez dans le Dashboard Stripe (mode test) que le paiement apparaît.
+4. Une fois satisfait, remplacez `STRIPE_SECRET_KEY` par votre clé `sk_live_...` et redéployez.
+
+## 7. Reçus, taxes automatiques et codes promo
+
+### Reçus email automatiques
+
+Aucun code requis. Dans le Dashboard Stripe : `Paramètres > Emails clients` (ou `Business settings > Customer emails`), activez **"Paiements réussis"**. Stripe collecte déjà l'email du client pendant le paiement (Checkout le demande automatiquement) et lui envoie un reçu.
+
+### Taxes automatiques (Stripe Tax)
+
+1. Dans le Dashboard Stripe, activez **Stripe Tax** (`Paramètres > Tax`) et renseignez votre adresse d'origine (obligatoire pour calculer les taxes).
+2. Dans l'admin (`admin/index.html`), choisissez si vos prix saisis sont **hors taxe** ou **toutes taxes comprises** (menu déroulant à côté de la devise), puis réexportez votre catalogue.
+3. Sur Vercel, ajoutez la variable d'environnement `ENABLE_AUTOMATIC_TAX=true` et redéployez.
+
+Une fois activé, Stripe calcule automatiquement la taxe selon l'adresse de facturation du client (collectée automatiquement pendant le paiement) et l'ajoute au total affiché sur la page Stripe Checkout.
+
+**Tant que `ENABLE_AUTOMATIC_TAX` n'est pas défini sur `true`, rien ne change** : les prix sont facturés tels quels, sans calcul de taxe automatique.
+
+#### Cas du Québec (TPS + TVQ)
+
+Au Québec, deux taxes distinctes s'appliquent et nécessitent **deux inscriptions séparées** dans Stripe, même si Revenu Québec administre les deux :
+
+1. **TPS/TVH (fédérale, 5 %)** : inscription auprès de l'ARC (Agence du revenu du Canada).
+2. **TVQ (provinciale, 9,975 %)** : inscription auprès de Revenu Québec.
+
+Vous n'êtes **obligé de vous inscrire à aucune des deux tant que vos ventes taxables restent sous 30 000 $ CA sur 12 mois** (seuil de « petit fournisseur », identique pour la TPS et la TVQ). En dessous de ce seuil, vous pouvez simplement ne pas activer Stripe Tax et vendre vos prix sans taxe.
+
+Une fois inscrit (ou si vous dépassez le seuil) :
+
+1. Dashboard Stripe > `Paramètres > Tax > Registrations` : ajoutez une inscription pour **Canada** (TPS/TVH, avec votre numéro d'entreprise) puis une seconde pour **Québec** (TVQ, avec votre numéro d'inscription TVQ).
+2. Assurez-vous que `SHIP_TO_COUNTRIES` (ou la collecte d'adresse de facturation) inclut bien `CA` pour que Stripe puisse déterminer la province du client.
+3. Stripe Tax appliquera alors automatiquement 5 % + 9,975 % aux clients québécois, et les taux corrects pour les autres provinces si vous vous y inscrivez aussi.
+
+Le catalogue de démo (`public/products.json`) est déjà configuré en dollars canadiens (`"currency": "cad"`).
+
+### Codes promo
+
+Déjà activé dans `api/create-checkout-session.js` (`allow_promotion_codes: true`) — un champ "Code promo" apparaît automatiquement sur la page de paiement Stripe. Pour créer un code :
+
+1. Dashboard Stripe > `Produits > Coupons` : créez un coupon (ex. -10%, ou -5€, avec ou sans date d'expiration).
+2. `Produits > Codes promotionnels` : créez un code (ex. `BIENVENUE10`) lié à ce coupon.
+3. Vos clients l'utilisent directement sur la page de paiement — aucune action supplémentaire de votre part.
+
+## 8. Gestion du stock (suivi automatique entre les commandes)
+
+Le stock est **optionnel par produit** : un produit sans valeur de stock renseignée dans l'admin est traité comme illimité (parfait pour un téléchargement, un service, ou tout produit dont vous ne voulez pas suivre la quantité). Seuls les produits avec un stock renseigné sont suivis.
+
+Fonctionnement : quand un client clique sur « Passer la commande », la quantité demandée est **réservée immédiatement** (décomptée) avant même que le paiement soit confirmé — cela évite que deux clients achètent en même temps la dernière unité. Si le client abandonne le paiement (session expirée après 40 minutes, ou paiement asynchrone qui échoue), un webhook Stripe restitue automatiquement le stock réservé.
+
+### Mise en place (une fois)
+
+1. **Ajouter une base de données Vercel KV** : dans votre projet Vercel, `Storage > Create Database > KV` (gratuit jusqu'à un usage raisonnable). Vercel ajoute automatiquement les variables `KV_REST_API_URL` et `KV_REST_API_TOKEN` à votre projet — aucune configuration manuelle nécessaire, c'est ce qui active le suivi de stock (sans cette base, tout fonctionne comme avant, sans suivi).
+2. **Définir un jeton admin** : ajoutez la variable d'environnement `ADMIN_STOCK_TOKEN` avec une chaîne aléatoire longue (ex. générée sur [1password.com/password-generator](https://1password.com/password-generator) ou similaire) — c'est le mot de passe qui protège le réapprovisionnement.
+3. **Créer le webhook Stripe** : Dashboard Stripe > `Développeurs > Webhooks > Ajouter un point de terminaison`.
+   - URL : `https://votre-projet.vercel.app/api/webhook`
+   - Événements à écouter : `checkout.session.expired` et `checkout.session.async_payment_failed`
+   - Une fois créé, copiez le « Signing secret » (`whsec_...`) dans la variable d'environnement `STRIPE_WEBHOOK_SECRET`.
+4. Redéployez le projet pour que les nouvelles variables soient prises en compte.
+
+### Utilisation au quotidien
+
+1. Dans `admin/index.html`, renseignez un **Stock initial** par produit (laissez vide pour un stock illimité).
+2. Exportez et déployez comme d'habitude. La première fois qu'un produit avec un stock défini est vendu (ou consulté via le widget), ce nombre devient la valeur de départ suivie en ligne.
+3. **Pour réapprovisionner ensuite**, n'éditez plus le champ « Stock initial » (il ne sert qu'à l'amorçage) : utilisez le panneau **« Stock en ligne »** en bas de l'admin — renseignez une seule fois l'URL de votre API et votre `ADMIN_STOCK_TOKEN` (mémorisés dans votre navigateur), cliquez sur **Charger le stock actuel**, puis entrez un ajustement (ex. `+20` pour un réassort, `-1` pour une correction) et **Appliquer**.
+4. Le widget affiche automatiquement « Rupture de stock » et désactive le bouton d'achat quand un produit atteint 0, à condition d'ajouter l'attribut `data-stock-url="https://votre-projet.vercel.app/api/stock"` sur votre bloc d'intégration (voir `public/demo.html`).
+
+### Limites à connaître
+
+- Le stock est stocké dans Vercel KV, pas dans `products.json` — c'est volontaire (voir ci-dessus), mais cela veut dire que le stock affiché dans l'admin après un import ZIP reflète le dernier export, pas forcément le stock réellement disponible en ligne (utilisez « Charger le stock actuel » pour le vérifier).
+- Si la livraison du webhook échoue durablement (rare), une réservation abandonnée ne sera pas restituée automatiquement ; vous pouvez toujours corriger manuellement via le panneau de réapprovisionnement.
+
+## Aller plus loin (suggestions restantes)
+
+- **Suivi des commandes** : pour l'instant, tout le suivi se fait depuis le Dashboard Stripe. Un webhook Stripe supplémentaire permettrait d'automatiser d'autres actions après paiement (email personnalisé, mise à jour d'un tableau de commandes, etc.) si besoin plus tard.

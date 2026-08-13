@@ -1,0 +1,46 @@
+{
+  "currency": "cad",
+  "taxBehavior": "exclusive",
+  "categories": [
+    { "id": "vetements", "name": "Vêtements" },
+    { "id": "accessoires", "name": "Accessoires" }
+  ],
+  "products": [
+    {
+      "id": "prod-001",
+      "name": "Produit A",
+      "description": "Description courte du produit A. Modifiez ce texte depuis l'interface d'admin.",
+      "price": 1999,
+      "category": "vetements",
+      "image": "images/produit-a.svg",
+      "active": true
+    },
+    {
+      "id": "prod-002",
+      "name": "Produit B",
+      "description": "Description courte du produit B.",
+      "price": 2499,
+      "category": "vetements",
+      "image": "images/produit-b.svg",
+      "active": true
+    },
+    {
+      "id": "prod-003",
+      "name": "Produit C",
+      "description": "Description courte du produit C.",
+      "price": 1299,
+      "category": "accessoires",
+      "image": "images/produit-c.svg",
+      "active": true
+    },
+    {
+      "id": "prod-004",
+      "name": "Produit D",
+      "description": "Description courte du produit D.",
+      "price": 3499,
+      "category": "accessoires",
+      "image": "images/produit-d.svg",
+      "active": true
+    }
+  ]
+}

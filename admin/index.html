@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin boutique</title>
+<link rel="stylesheet" href="../public/boutique.css">
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f7f7fb;
+    color: #1a1a2e;
+    margin: 0;
+    padding: 24px;
+  }
+  .wrap { max-width: 1100px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; }
+  p.lead { color: #6b7280; margin-top: 0; }
+  .panel {
+    background: #fff;
+    border: 1px solid #e6e6ec;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  .panel h2 { margin-top: 0; font-size: 18px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  label { font-size: 13px; font-weight: 600; display: block; margin-bottom: 4px; }
+  input[type=text], input[type=number], select, textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid #e6e6ec;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  textarea { min-height: 70px; resize: vertical; }
+  .field { margin-bottom: 12px; flex: 1; min-width: 180px; }
+  .btn {
+    border: none;
+    background: #635bff;
+    color: #fff;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn:hover { opacity: 0.9; }
+  .btn-secondary { background: #1a1a2e; }
+  .btn-outline { background: #fff; color: #1a1a2e; border: 1px solid #e6e6ec; }
+  .btn-danger { background: #c0392b; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #e6e6ec; }
+  .pill {
+    display: inline-block;
+    background: #f0f0f7;
+    border-radius: 999px;
+    padding: 2px 10px;
+    font-size: 12px;
+  }
+  .thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 6px; background: #f3f3f6; }
+  .actions { display: flex; gap: 6px; }
+  .muted { color: #6b7280; font-size: 13px; }
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #1a1a2e;
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 8px;
+    font-size: 14px;
+    z-index: 999;
+    display: none;
+  }
+  .form-title { font-weight: 700; margin-bottom: 10px; }
+  #image-preview { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; background: #f3f3f6; display: none; margin-top: 6px; }
+  .hint { font-size: 12px; color: #6b7280; margin-top: 4px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Admin boutique</h1>
+  <p class="lead">Gérez vos catégories et produits ici, puis exportez le résultat pour l'envoyer sur votre hébergement.</p>
+
+  <div class="panel">
+    <h2>Import / Export</h2>
+    <div class="row">
+      <button class="btn" id="btn-export">Exporter (ZIP)</button>
+      <button class="btn-outline btn" id="btn-import">Importer un ZIP existant</button>
+      <input type="file" id="import-input" accept=".zip" style="display:none">
+      <button class="btn-outline btn" id="btn-reset">Recommencer à zéro</button>
+      <div class="field" style="max-width:160px;">
+        <label>Devise</label>
+        <select id="currency">
+          <option value="cad">CAD ($)</option>
+          <option value="usd">USD ($)</option>
+          <option value="eur">EUR (€)</option>
+          <option value="gbp">GBP (£)</option>
+          <option value="chf">CHF</option>
+        </select>
+      </div>
+      <div class="field" style="max-width:220px;">
+        <label>Prix saisis ci-dessous</label>
+        <select id="tax-behavior">
+          <option value="exclusive">Hors taxe (TVA ajoutée au paiement)</option>
+          <option value="inclusive">Toutes taxes comprises</option>
+        </select>
+      </div>
+    </div>
+    <p class="hint">L'export produit un fichier ZIP contenant <code>products.json</code> et le dossier <code>images/</code>. Copiez leur contenu dans le dossier <code>public</code> de votre site (à côté de <code>boutique.js</code> et <code>boutique.css</code>), en remplaçant les fichiers existants.</p>
+    <p class="hint">Le réglage « Prix saisis ci-dessous » n'a d'effet que si vous activez Stripe Tax côté serveur (voir README) — sinon les prix sont simplement facturés tels quels, sans calcul de taxe automatique.</p>
+  </div>
+
+  <div class="panel">
+    <h2>Catégories</h2>
+    <table id="categories-table">
+      <thead><tr><th>Nom</th><th>Identifiant</th><th></th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <div class="row" style="margin-top:12px;">
+      <div class="field" style="max-width:260px;">
+        <input type="text" id="new-category-name" placeholder="Nom de la nouvelle catégorie">
+      </div>
+      <button class="btn" id="btn-add-category">Ajouter la catégorie</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2 id="product-form-title" class="form-title">Ajouter un produit</h2>
+    <div class="row">
+      <div class="field">
+        <label>Nom du produit</label>
+        <input type="text" id="p-name">
+      </div>
+      <div class="field" style="max-width:160px;">
+        <label>Prix (dans l'unité de la devise, ex: 19.99)</label>
+        <input type="number" step="0.01" min="0" id="p-price">
+      </div>
+      <div class="field" style="max-width:200px;">
+        <label>Catégorie</label>
+        <select id="p-category"></select>
+      </div>
+      <div class="field" style="max-width:180px;">
+        <label>Stock initial</label>
+        <input type="number" step="1" min="0" id="p-stock" placeholder="Illimité">
+        <p class="hint">Laissez vide pour un produit sans quantité à gérer (ex : téléchargement, service).</p>
+      </div>
+    </div>
+    <div class="field">
+      <label>Description</label>
+      <textarea id="p-description"></textarea>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Image</label>
+        <input type="file" id="p-image" accept="image/*">
+        <img id="image-preview" alt="Aperçu">
+      </div>
+      <div class="field" style="max-width:140px;">
+        <label>Actif (visible)</label>
+        <select id="p-active">
+          <option value="true">Oui</option>
+          <option value="false">Non</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn" id="btn-save-product">Ajouter le produit</button>
+      <button class="btn-outline btn" id="btn-cancel-edit" style="display:none;">Annuler la modification</button>
+    </div>
+  </div>
+
+  <div class="panel">
+    <h2>Produits (<span id="product-count">0</span>)</h2>
+    <table>
+      <thead><tr><th></th><th>Nom</th><th>Catégorie</th><th>Prix</th><th>Stock</th><th>Actif</th><th></th></tr></thead>
+      <tbody id="products-table-body"></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>Stock en ligne (réapprovisionnement)</h2>
+    <p class="hint">
+      Une fois votre boutique déployée avec le suivi de stock activé (Vercel KV + variable <code>ADMIN_STOCK_TOKEN</code>, voir README), le stock affiché en ligne devient la vraie source de vérité — il se décompte à chaque vente. Le champ « Stock initial » ci-dessus ne sert qu'à l'amorcer la toute première fois qu'un produit est vendu. Pour l'ajuster ensuite (réassort, correction), utilisez ce panneau plutôt que de modifier « Stock initial ».
+    </p>
+    <div class="row">
+      <div class="field">
+        <label>URL de votre API (ex: https://votre-projet.vercel.app)</label>
+        <input type="text" id="api-base-url" placeholder="https://votre-projet.vercel.app">
+      </div>
+      <div class="field" style="max-width:260px;">
+        <label>Jeton admin (ADMIN_STOCK_TOKEN)</label>
+        <input type="text" id="api-admin-token" placeholder="Votre jeton secret">
+      </div>
+    </div>
+    <div class="row">
+      <button class="btn" id="btn-load-stock">Charger le stock actuel</button>
+    </div>
+    <table style="margin-top:14px;">
+      <thead><tr><th>Produit</th><th>Stock en ligne</th><th>Ajustement</th><th></th></tr></thead>
+      <tbody id="live-stock-table-body"></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
+    <h2>Aperçu</h2>
+    <div id="preview" class="boutique">
+      <div class="boutique-grid" id="preview-grid"></div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const STORAGE_KEY = 'boutique_admin_draft_v1';
+  let state = { currency: 'cad', taxBehavior: 'exclusive', categories: [], products: [] };
+  let editingId = null;
+
+  function uid(prefix) {
+    return prefix + '-' + Math.random().toString(36).slice(2, 8);
+  }
+
+  function slug(str) {
+    return String(str)
+      .toLowerCase()
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/(^-|-$)/g, '');
+  }
+
+  function sanitizeFilename(name) {
+    return slug(name.replace(/\.[^.]+$/, '')) + (name.match(/\.[^.]+$/) || ['.jpg'])[0];
+  }
+
+  function toast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.style.display = 'block';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => (el.style.display = 'none'), 2500);
+  }
+
+  function save() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn('Sauvegarde locale impossible (stockage plein ?)', e);
+    }
+    render();
+  }
+
+  function loadDraft() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch {}
+    return null;
+  }
+
+  // ---------- Catégories ----------
+
+  document.getElementById('btn-add-category').addEventListener('click', () => {
+    const input = document.getElementById('new-category-name');
+    const name = input.value.trim();
+    if (!name) return;
+    const id = slug(name) || uid('cat');
+    if (state.categories.some((c) => c.id === id)) {
+      toast('Cette catégorie existe déjà.');
+      return;
+    }
+    state.categories.push({ id, name });
+    input.value = '';
+    save();
+  });
+
+  function renderCategories() {
+    const tbody = document.querySelector('#categories-table tbody');
+    tbody.innerHTML = '';
+    state.categories.forEach((cat) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + escapeHtml(cat.name) + '</td>' +
+        '<td class="muted">' + escapeHtml(cat.id) + '</td>' +
+        '<td class="actions"><button class="btn btn-danger btn-sm" data-id="' + cat.id + '">Supprimer</button></td>';
+      tr.querySelector('button').addEventListener('click', () => {
+        const inUse = state.products.some((p) => p.category === cat.id);
+        if (inUse && !confirm('Des produits utilisent cette catégorie. La supprimer quand même ?')) return;
+        state.categories = state.categories.filter((c) => c.id !== cat.id);
+        save();
+      });
+      tbody.appendChild(tr);
+    });
+
+    const select = document.getElementById('p-category');
+    const current = select.value;
+    select.innerHTML = state.categories.map((c) => '<option value="' + c.id + '">' + escapeHtml(c.name) + '</option>').join('');
+    if (state.categories.some((c) => c.id === current)) select.value = current;
+  }
+
+  // ---------- Produits ----------
+
+  let pendingImageDataUrl = null;
+  let pendingImageFilename = null;
+
+  document.getElementById('p-image').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      pendingImageDataUrl = reader.result;
+      pendingImageFilename = sanitizeFilename(file.name);
+      const preview = document.getElementById('image-preview');
+      preview.src = pendingImageDataUrl;
+      preview.style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  });
+
+  document.getElementById('btn-save-product').addEventListener('click', () => {
+    const name = document.getElementById('p-name').value.trim();
+    const priceMajor = parseFloat(document.getElementById('p-price').value);
+    const category = document.getElementById('p-category').value;
+    const description = document.getElementById('p-description').value.trim();
+    const active = document.getElementById('p-active').value === 'true';
+    const stockRaw = document.getElementById('p-stock').value.trim();
+    const stock = stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10));
+
+    if (!name) { toast('Le nom du produit est requis.'); return; }
+    if (isNaN(priceMajor) || priceMajor < 0) { toast('Le prix est invalide.'); return; }
+    if (!category) { toast('Créez au moins une catégorie avant d\'ajouter un produit.'); return; }
+    if (stockRaw !== '' && isNaN(stock)) { toast('Le stock doit être un nombre entier, ou vide pour illimité.'); return; }
+
+    if (editingId) {
+      const product = state.products.find((p) => p.id === editingId);
+      product.name = name;
+      product.price = Math.round(priceMajor * 100);
+      product.category = category;
+      product.description = description;
+      product.active = active;
+      product.stock = stock;
+      if (pendingImageDataUrl) {
+        product.imageDataUrl = pendingImageDataUrl;
+        product.imageFilename = pendingImageFilename;
+      }
+    } else {
+      state.products.push({
+        id: uid('prod'),
+        name,
+        price: Math.round(priceMajor * 100),
+        category,
+        description,
+        active,
+        stock,
+        imageDataUrl: pendingImageDataUrl,
+        imageFilename: pendingImageFilename,
+      });
+    }
+
+    resetProductForm();
+    save();
+    toast('Produit enregistré.');
+  });
+
+  document.getElementById('btn-cancel-edit').addEventListener('click', resetProductForm);
+
+  function resetProductForm() {
+    editingId = null;
+    pendingImageDataUrl = null;
+    pendingImageFilename = null;
+    document.getElementById('p-name').value = '';
+    document.getElementById('p-price').value = '';
+    document.getElementById('p-stock').value = '';
+    document.getElementById('p-description').value = '';
+    document.getElementById('p-active').value = 'true';
+    document.getElementById('p-image').value = '';
+    document.getElementById('image-preview').style.display = 'none';
+    document.getElementById('product-form-title').textContent = 'Ajouter un produit';
+    document.getElementById('btn-save-product').textContent = 'Ajouter le produit';
+    document.getElementById('btn-cancel-edit').style.display = 'none';
+  }
+
+  function editProduct(id) {
+    const p = state.products.find((x) => x.id === id);
+    if (!p) return;
+    editingId = id;
+    pendingImageDataUrl = null;
+    pendingImageFilename = null;
+    document.getElementById('p-name').value = p.name;
+    document.getElementById('p-price').value = (p.price / 100).toFixed(2);
+    document.getElementById('p-category').value = p.category;
+    document.getElementById('p-stock').value = p.stock === null || p.stock === undefined ? '' : p.stock;
+    document.getElementById('p-description').value = p.description || '';
+    document.getElementById('p-active').value = String(p.active !== false);
+    const preview = document.getElementById('image-preview');
+    if (p.imageDataUrl) {
+      preview.src = p.imageDataUrl;
+      preview.style.display = 'block';
+    } else {
+      preview.style.display = 'none';
+    }
+    document.getElementById('product-form-title').textContent = 'Modifier le produit';
+    document.getElementById('btn-save-product').textContent = 'Enregistrer les modifications';
+    document.getElementById('btn-cancel-edit').style.display = 'inline-block';
+    window.scrollTo({ top: document.getElementById('product-form-title').offsetTop - 20, behavior: 'smooth' });
+  }
+
+  function deleteProduct(id) {
+    if (!confirm('Supprimer ce produit ?')) return;
+    state.products = state.products.filter((p) => p.id !== id);
+    save();
+  }
+
+  function renderProducts() {
+    const tbody = document.getElementById('products-table-body');
+    tbody.innerHTML = '';
+    document.getElementById('product-count').textContent = state.products.length;
+    const catNameById = new Map(state.categories.map((c) => [c.id, c.name]));
+
+    state.products.forEach((p) => {
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td><img class="thumb" src="' + (p.imageDataUrl || '') + '" alt=""></td>' +
+        '<td>' + escapeHtml(p.name) + '</td>' +
+        '<td><span class="pill">' + escapeHtml(catNameById.get(p.category) || p.category) + '</span></td>' +
+        '<td>' + formatPrice(p.price) + '</td>' +
+        '<td>' + (p.stock === null || p.stock === undefined ? 'Illimité' : p.stock) + '</td>' +
+        '<td>' + (p.active !== false ? 'Oui' : 'Non') + '</td>' +
+        '<td class="actions"><button class="btn btn-outline btn-sm" data-action="edit">Modifier</button> <button class="btn btn-danger btn-sm" data-action="delete">Supprimer</button></td>';
+      tr.querySelector('[data-action="edit"]').addEventListener('click', () => editProduct(p.id));
+      tr.querySelector('[data-action="delete"]').addEventListener('click', () => deleteProduct(p.id));
+      tbody.appendChild(tr);
+    });
+  }
+
+  function renderPreview() {
+    const grid = document.getElementById('preview-grid');
+    const visible = state.products.filter((p) => p.active !== false);
+    if (visible.length === 0) {
+      grid.innerHTML = '<p class="boutique-empty">Aucun produit à afficher.</p>';
+      return;
+    }
+    grid.innerHTML = visible
+      .map(
+        (p) =>
+          '<div class="boutique-card">' +
+          '<img class="boutique-card-image" src="' + (p.imageDataUrl || '') + '" alt="">' +
+          '<div class="boutique-card-body">' +
+          '<h3 class="boutique-card-title">' + escapeHtml(p.name) + '</h3>' +
+          '<p class="boutique-card-desc">' + escapeHtml(p.description || '') + '</p>' +
+          '<p class="boutique-card-price">' + formatPrice(p.price) + '</p>' +
+          '<button class="boutique-btn" disabled>Ajouter au panier</button>' +
+          '</div></div>'
+      )
+      .join('');
+  }
+
+  function formatPrice(cents) {
+    try {
+      return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: state.currency.toUpperCase() }).format(cents / 100);
+    } catch {
+      return (cents / 100).toFixed(2) + ' ' + state.currency.toUpperCase();
+    }
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  function render() {
+    renderCategories();
+    renderProducts();
+    renderPreview();
+    renderLiveStockTable();
+    document.getElementById('currency').value = state.currency;
+    document.getElementById('tax-behavior').value = state.taxBehavior || 'exclusive';
+  }
+
+  document.getElementById('currency').addEventListener('change', (e) => {
+    state.currency = e.target.value;
+    save();
+  });
+
+  document.getElementById('tax-behavior').addEventListener('change', (e) => {
+    state.taxBehavior = e.target.value;
+    save();
+  });
+
+  // ---------- Export ----------
+
+  document.getElementById('btn-export').addEventListener('click', async () => {
+    if (state.products.length === 0) {
+      toast('Ajoutez au moins un produit avant d\'exporter.');
+      return;
+    }
+    const zip = new JSZip();
+    const imagesFolder = zip.folder('images');
+
+    const catalog = {
+      currency: state.currency,
+      taxBehavior: state.taxBehavior || 'exclusive',
+      categories: state.categories.map((c) => ({ id: c.id, name: c.name })),
+      products: [],
+    };
+
+    for (const p of state.products) {
+      let imagePath = '';
+      if (p.imageDataUrl && p.imageFilename) {
+        const blob = await (await fetch(p.imageDataUrl)).blob();
+        let filename = p.imageFilename;
+        let counter = 1;
+        while (imagesFolder.file(filename)) {
+          filename = p.imageFilename.replace(/(\.[^.]+)$/, '-' + counter + '$1');
+          counter++;
+        }
+        imagesFolder.file(filename, blob);
+        imagePath = 'images/' + filename;
+      }
+      catalog.products.push({
+        id: p.id,
+        name: p.name,
+        description: p.description || '',
+        price: p.price,
+        category: p.category,
+        image: imagePath,
+        active: p.active !== false,
+        stock: p.stock === null || p.stock === undefined ? null : p.stock,
+      });
+    }
+
+    zip.file('products.json', JSON.stringify(catalog, null, 2));
+
+    const blob = await zip.generateAsync({ type: 'blob' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'boutique-export.zip';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Export généré.');
+  });
+
+  // ---------- Import ----------
+
+  document.getElementById('btn-import').addEventListener('click', () => {
+    document.getElementById('import-input').click();
+  });
+
+  document.getElementById('import-input').addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    try {
+      const zip = await JSZip.loadAsync(file);
+      const jsonFile = zip.file('products.json');
+      if (!jsonFile) throw new Error('products.json introuvable dans le ZIP.');
+      const catalog = JSON.parse(await jsonFile.async('string'));
+
+      const newState = {
+        currency: catalog.currency || 'eur',
+        taxBehavior: catalog.taxBehavior === 'inclusive' ? 'inclusive' : 'exclusive',
+        categories: catalog.categories || [],
+        products: [],
+      };
+
+      for (const p of catalog.products || []) {
+        let imageDataUrl = null;
+        let imageFilename = null;
+        if (p.image) {
+          const imgFile = zip.file(p.image) || zip.file(p.image.replace(/^images\//, 'images/'));
+          if (imgFile) {
+            const blob = await imgFile.async('blob');
+            imageDataUrl = await blobToDataUrl(blob);
+            imageFilename = p.image.split('/').pop();
+          }
+        }
+        newState.products.push({
+          id: p.id || uid('prod'),
+          name: p.name,
+          description: p.description || '',
+          price: p.price,
+          category: p.category,
+          active: p.active !== false,
+          stock: p.stock === null || p.stock === undefined ? null : p.stock,
+          imageDataUrl,
+          imageFilename,
+        });
+      }
+
+      state = newState;
+      resetProductForm();
+      save();
+      toast('Import réussi.');
+    } catch (err) {
+      alert('Import impossible : ' + err.message);
+    } finally {
+      e.target.value = '';
+    }
+  });
+
+  function blobToDataUrl(blob) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  document.getElementById('btn-reset').addEventListener('click', () => {
+    if (!confirm('Effacer toutes les données actuelles (catégories, produits) ?')) return;
+    state = { currency: 'cad', taxBehavior: 'exclusive', categories: [], products: [] };
+    resetProductForm();
+    save();
+  });
+
+  // ---------- Stock en ligne ----------
+
+  const API_CONFIG_KEY = 'boutique_admin_api_config_v1';
+
+  function loadApiConfig() {
+    try {
+      return JSON.parse(localStorage.getItem(API_CONFIG_KEY)) || {};
+    } catch {
+      return {};
+    }
+  }
+
+  function saveApiConfig() {
+    const config = {
+      baseUrl: document.getElementById('api-base-url').value.trim().replace(/\/+$/, ''),
+      token: document.getElementById('api-admin-token').value.trim(),
+    };
+    localStorage.setItem(API_CONFIG_KEY, JSON.stringify(config));
+    return config;
+  }
+
+  (function restoreApiConfig() {
+    const config = loadApiConfig();
+    if (config.baseUrl) document.getElementById('api-base-url').value = config.baseUrl;
+    if (config.token) document.getElementById('api-admin-token').value = config.token;
+  })();
+
+  let liveStockLevels = {};
+
+  function renderLiveStockTable() {
+    const tbody = document.getElementById('live-stock-table-body');
+    tbody.innerHTML = '';
+    state.products.forEach((p) => {
+      const level = liveStockLevels[p.id];
+      const displayLevel = level === undefined ? '—' : level === null ? 'Illimité' : level;
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + escapeHtml(p.name) + '</td>' +
+        '<td>' + displayLevel + '</td>' +
+        '<td><input type="number" step="1" style="max-width:100px;" placeholder="ex: +10 ou -1" data-role="delta"></td>' +
+        '<td><button class="btn btn-outline btn-sm" data-action="apply">Appliquer</button></td>';
+      tr.querySelector('[data-action="apply"]').addEventListener('click', async () => {
+        const input = tr.querySelector('[data-role="delta"]');
+        const delta = parseInt(input.value, 10);
+        if (isNaN(delta)) { toast('Entrez un ajustement (nombre entier).'); return; }
+        await adjustLiveStock(p.id, delta);
+        input.value = '';
+      });
+      tbody.appendChild(tr);
+    });
+  }
+
+  document.getElementById('btn-load-stock').addEventListener('click', async () => {
+    const config = saveApiConfig();
+    if (!config.baseUrl) { toast('Renseignez l\'URL de votre API.'); return; }
+    if (state.products.length === 0) { toast('Ajoutez d\'abord des produits.'); return; }
+    try {
+      const ids = state.products.map((p) => p.id).join(',');
+      const response = await fetch(config.baseUrl + '/api/stock?ids=' + encodeURIComponent(ids));
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      liveStockLevels = await response.json();
+      renderLiveStockTable();
+      toast('Stock chargé.');
+    } catch (err) {
+      toast('Impossible de charger le stock : ' + err.message);
+    }
+  });
+
+  async function adjustLiveStock(productId, delta) {
+    const config = saveApiConfig();
+    if (!config.baseUrl || !config.token) { toast('Renseignez l\'URL de l\'API et le jeton admin.'); return; }
+    try {
+      const response = await fetch(config.baseUrl + '/api/stock-adjust', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + config.token },
+        body: JSON.stringify({ id: productId, delta }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erreur inconnue');
+      liveStockLevels[productId] = data.stock;
+      renderLiveStockTable();
+      toast('Stock ajusté.');
+    } catch (err) {
+      toast('Ajustement impossible : ' + err.message);
+    }
+  }
+
+  // ---------- Démarrage ----------
+
+  const draft = loadDraft();
+  if (draft && (draft.products || []).length > 0) {
+    if (confirm('Reprendre votre brouillon précédent ?')) state = draft;
+  } else if (draft) {
+    state = draft;
+  }
+  render();
+})();
+</script>
+</body>
+</html>
