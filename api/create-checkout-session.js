@@ -63,6 +63,7 @@ export default async function handler(req, res) {
             name: product.name,
             description: product.description ? String(product.description).slice(0, 500) : undefined,
             images: product.image && /^https?:\/\//.test(product.image) ? [product.image] : undefined,
+            tax_code: automaticTaxEnabled ? product.taxCode || 'txcd_99999999' : undefined,
           },
         },
       });

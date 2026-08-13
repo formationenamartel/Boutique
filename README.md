@@ -117,6 +117,10 @@ Une fois inscrit (ou si vous dépassez le seuil) :
 
 Le catalogue de démo (`public/products.json`) est déjà configuré en dollars canadiens (`"currency": "cad"`).
 
+#### Codes de taxe par produit (cas des biens numériques/services)
+
+Par défaut, chaque produit est taxé comme un **bien physique standard** (`txcd_99999999`). Si vous vendez des produits numériques, des services, ou des abonnements — dont le traitement fiscal peut différer — ajoutez un champ `"taxCode"` à ce produit dans `products.json` (ex. `"taxCode": "txcd_10103000"` pour un logiciel/SaaS). La liste complète des codes est disponible dans le [Tax Code Registry de Stripe](https://stripe.com/docs/tax/tax-codes).
+
 ### Codes promo
 
 Déjà activé dans `api/create-checkout-session.js` (`allow_promotion_codes: true`) — un champ "Code promo" apparaît automatiquement sur la page de paiement Stripe. Pour créer un code :
