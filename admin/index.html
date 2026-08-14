@@ -176,6 +176,32 @@
       <p class="hint">Pour un produit téléchargeable : uploadez le fichier dans Vercel Blob (Storage &gt; votre Blob store) et collez son URL ici. Un lien de téléchargement sécurisé sera envoyé par email après paiement (voir section 9 du README).</p>
     </div>
     <div class="row">
+      <div class="field">
+        <label>Catégorie fiscale (Stripe Tax, optionnel)</label>
+        <select id="p-tax-code">
+          <option value="">Bien général / standard (par défaut)</option>
+          <optgroup label="Biens physiques">
+            <option value="txcd_30011000">Vêtements et chaussures</option>
+            <option value="txcd_30011020">Uniformes scolaires</option>
+          </optgroup>
+          <optgroup label="Numérique / logiciel">
+            <option value="txcd_10000000">Service électronique général</option>
+            <option value="txcd_10103000">Logiciel / SaaS (usage personnel)</option>
+            <option value="txcd_10103001">Logiciel / SaaS (usage professionnel)</option>
+            <option value="txcd_10202000">Logiciel téléchargeable (usage personnel)</option>
+            <option value="txcd_10202003">Logiciel téléchargeable (usage professionnel)</option>
+            <option value="txcd_10302000">Livre numérique (téléchargement, droits permanents)</option>
+          </optgroup>
+          <optgroup label="Service">
+            <option value="txcd_20030000">Service général</option>
+          </optgroup>
+          <option value="custom">Autre (code personnalisé)...</option>
+        </select>
+        <input type="text" id="p-tax-code-custom" placeholder="ex : txcd_XXXXXXXX" style="display:none; margin-top:6px;">
+        <p class="hint">N'a d'effet que si les taxes automatiques sont activées (section 7 du README). Un livre <strong>imprimé</strong> n'a pas de catégorie dédiée chez Stripe — laissez "Bien général" pour l'instant, l'exemption de TVQ sur les livres nécessite une vérification séparée auprès de Stripe.</p>
+      </div>
+    </div>
+    <div class="row">
       <button class="btn" id="btn-save-product">Ajouter le produit</button>
       <button class="btn-outline btn" id="btn-cancel-edit" style="display:none;">Annuler la modification</button>
     </div>
@@ -331,6 +357,16 @@
     reader.readAsDataURL(file);
   });
 
+  document.getElementById('p-tax-code').addEventListener('change', (e) => {
+    document.getElementById('p-tax-code-custom').style.display = e.target.value === 'custom' ? 'block' : 'none';
+  });
+
+  function getSelectedTaxCode() {
+    const select = document.getElementById('p-tax-code').value;
+    if (select === 'custom') return document.getElementById('p-tax-code-custom').value.trim();
+    return select;
+  }
+
   document.getElementById('btn-save-product').addEventListener('click', () => {
     const name = document.getElementById('p-name').value.trim();
     const priceMajor = parseFloat(document.getElementById('p-price').value);
@@ -340,6 +376,7 @@
     const stockRaw = document.getElementById('p-stock').value.trim();
     const stock = stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10));
     const digitalFileUrl = document.getElementById('p-digital-file').value.trim();
+    const taxCode = getSelectedTaxCode();
 
     if (!name) { toast('Le nom du produit est requis.'); return; }
     if (isNaN(priceMajor) || priceMajor < 0) { toast('Le prix est invalide.'); return; }
@@ -355,6 +392,7 @@
       product.active = active;
       product.stock = stock;
       product.digitalFileUrl = digitalFileUrl || null;
+      product.taxCode = taxCode || null;
       if (pendingImageDataUrl) {
         product.imageDataUrl = pendingImageDataUrl;
         product.imageFilename = pendingImageFilename;
@@ -369,6 +407,7 @@
         active,
         stock,
         digitalFileUrl: digitalFileUrl || null,
+        taxCode: taxCode || null,
         imageDataUrl: pendingImageDataUrl,
         imageFilename: pendingImageFilename,
       });
@@ -389,6 +428,9 @@
     document.getElementById('p-price').value = '';
     document.getElementById('p-stock').value = '';
     document.getElementById('p-digital-file').value = '';
+    document.getElementById('p-tax-code').value = '';
+    document.getElementById('p-tax-code-custom').value = '';
+    document.getElementById('p-tax-code-custom').style.display = 'none';
     document.getElementById('p-description').value = '';
     document.getElementById('p-active').value = 'true';
     document.getElementById('p-image').value = '';
@@ -409,6 +451,22 @@
     document.getElementById('p-category').value = p.category;
     document.getElementById('p-stock').value = p.stock === null || p.stock === undefined ? '' : p.stock;
     document.getElementById('p-digital-file').value = p.digitalFileUrl || '';
+    const taxSelect = document.getElementById('p-tax-code');
+    const taxCustom = document.getElementById('p-tax-code-custom');
+    const knownTaxCode = p.taxCode && Array.from(taxSelect.options).some((o) => o.value === p.taxCode);
+    if (!p.taxCode) {
+      taxSelect.value = '';
+      taxCustom.value = '';
+      taxCustom.style.display = 'none';
+    } else if (knownTaxCode) {
+      taxSelect.value = p.taxCode;
+      taxCustom.value = '';
+      taxCustom.style.display = 'none';
+    } else {
+      taxSelect.value = 'custom';
+      taxCustom.value = p.taxCode;
+      taxCustom.style.display = 'block';
+    }
     document.getElementById('p-description').value = p.description || '';
     document.getElementById('p-active').value = String(p.active !== false);
     const preview = document.getElementById('image-preview');
@@ -545,6 +603,7 @@
         active: p.active !== false,
         stock: p.stock === null || p.stock === undefined ? null : p.stock,
         digitalFileUrl: p.digitalFileUrl || null,
+        taxCode: p.taxCode || null,
       });
     }
 
@@ -602,6 +661,7 @@
           active: p.active !== false,
           stock: p.stock === null || p.stock === undefined ? null : p.stock,
           digitalFileUrl: p.digitalFileUrl || null,
+          taxCode: p.taxCode || null,
           imageDataUrl,
           imageFilename,
         });

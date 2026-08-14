@@ -121,7 +121,9 @@ Le catalogue de démo (`public/products.json`) est déjà configuré en dollars 
 
 #### Codes de taxe par produit (cas des biens numériques/services)
 
-Par défaut, chaque produit est taxé comme un **bien physique standard** (`txcd_99999999`). Si vous vendez des produits numériques, des services, ou des abonnements — dont le traitement fiscal peut différer — ajoutez un champ `"taxCode"` à ce produit dans `products.json` (ex. `"taxCode": "txcd_10103000"` pour un logiciel/SaaS). La liste complète des codes est disponible dans le [Tax Code Registry de Stripe](https://stripe.com/docs/tax/tax-codes).
+Par défaut, chaque produit est taxé comme un **bien physique standard** (`txcd_99999999`). Si vous vendez des produits numériques, des services, ou des abonnements — dont le traitement fiscal peut différer — sélectionnez la **« Catégorie fiscale (Stripe Tax) »** appropriée directement dans le formulaire produit de l'admin (`admin/index.html`) : une liste des catégories les plus courantes est proposée, avec une option « Autre (code personnalisé) » pour entrer n'importe quel code manuellement. La liste complète des codes est disponible dans le [Tax Code Registry de Stripe](https://stripe.com/docs/tax/tax-codes).
+
+**Cas particulier des livres imprimés** : au moment d'écrire ces lignes, Stripe ne propose pas de code fiscal dédié aux livres imprimés physiques (seulement aux livres numériques) — le code générique « Bien général » sera donc utilisé, ce qui ne reflète pas l'exemption de TVQ applicable aux livres au Québec. Si cette exemption est importante pour vous, vérifiez directement auprès du support Stripe ou d'un comptable comment configurer un taux fixe pour cette catégorie de produits.
 
 ### Codes promo
 
