@@ -3,9 +3,20 @@
   "taxBehavior": "exclusive",
   "categories": [
     { "id": "vetements", "name": "Vêtements" },
-    { "id": "accessoires", "name": "Accessoires" }
+    { "id": "accessoires", "name": "Accessoires" },
+    { "id": "numerique", "name": "Numérique" }
   ],
   "products": [
+    {
+      "id": "prod-digital-001",
+      "name": "Guide PDF (test livraison numérique)",
+      "description": "Produit de test pour valider la livraison automatique par email.",
+      "price": 100,
+      "category": "numerique",
+      "image": "images/produit-a.svg",
+      "active": true,
+      "digitalFileUrl": "https://xda4qxycu9kkurui.public.blob.vercel-storage.com/Votre%20h%C3%A9ritage%20num%C3%A9rique_%20Guide%20complet%20pour%20cr%C3%A9er%20une%20vid%C3%A9o%20testamentaire%20personnelle.pdf"
+    },
     {
       "id": "prod-001",
       "name": "Produit A",
