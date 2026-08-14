@@ -4,9 +4,19 @@
   "categories": [
     { "id": "vetements", "name": "Vêtements" },
     { "id": "accessoires", "name": "Accessoires" },
-    { "id": "numerique", "name": "Numérique" }
+    { "id": "numerique", "name": "Numérique" },
+    { "id": "livres", "name": "Livres" }
   ],
   "products": [
+    {
+      "id": "prod-livre-test",
+      "name": "Livre (test taxe TVQ 0%)",
+      "description": "Produit de test pour verifier le traitement fiscal des livres imprimes au Quebec.",
+      "price": 500,
+      "category": "livres",
+      "image": "images/produit-b.svg",
+      "active": true
+    },
     {
       "id": "prod-digital-001",
       "name": "Guide PDF (test livraison numérique)",
