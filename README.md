@@ -41,8 +41,10 @@ Une fois hébergé, notez l'URL publique de votre `products.json`, par exemple :
    | `DEFAULT_CANCEL_URL` | `https://monsite.com/boutique` | Page affichée si le client annule |
    | `SHIP_TO_COUNTRIES` *(optionnel)* | `CA,US` | Si vous vendez des produits physiques, pays de livraison acceptés par Stripe |
    | `ENABLE_AUTOMATIC_TAX` *(optionnel)* | `true` | Active le calcul automatique de la TVA/taxes via Stripe Tax (voir section 7) |
-   | `STRIPE_WEBHOOK_SECRET` *(optionnel)* | `whsec_...` | Requis uniquement si vous activez le suivi de stock (voir section 8) |
+   | `STRIPE_WEBHOOK_SECRET` *(optionnel)* | `whsec_...` | Requis pour le suivi de stock (section 8) et/ou la livraison numérique (section 9) |
    | `ADMIN_STOCK_TOKEN` *(optionnel)* | une chaîne aléatoire longue | Requis uniquement si vous activez le suivi de stock (voir section 8) |
+   | `RESEND_API_KEY` *(optionnel)* | `re_...` | Requis uniquement pour la livraison automatique de produits numériques (voir section 9) |
+   | `FROM_EMAIL` *(optionnel)* | `boutique@votredomaine.com` | Adresse d'expédition des emails de livraison (voir section 9) |
 
 4. Déployez. Vous obtenez une URL du type `https://votre-projet.vercel.app/api/create-checkout-session` — c'est l'URL `data-api-url` à utiliser dans le widget.
 
@@ -156,6 +158,30 @@ Fonctionnement : quand un client clique sur « Passer la commande », la quantit
 
 - Le stock est stocké dans Vercel KV, pas dans `products.json` — c'est volontaire (voir ci-dessus), mais cela veut dire que le stock affiché dans l'admin après un import ZIP reflète le dernier export, pas forcément le stock réellement disponible en ligne (utilisez « Charger le stock actuel » pour le vérifier).
 - Si la livraison du webhook échoue durablement (rare), une réservation abandonnée ne sera pas restituée automatiquement ; vous pouvez toujours corriger manuellement via le panneau de réapprovisionnement.
+
+## 9. Livraison automatique des produits numériques
+
+Pour un produit téléchargeable (ebook, logiciel, fichier de service, etc.), la boutique peut envoyer automatiquement un **email avec un lien de téléchargement sécurisé** dès que le paiement est confirmé — pas besoin de le faire manuellement.
+
+Fonctionnement : le lien envoyé n'est pas le fichier lui-même, mais une adresse de votre boutique (`/api/download?token=...`) qui vérifie un jeton à usage limité avant de rediriger vers le fichier réel. Chaque lien est valide **7 jours** et **5 téléchargements maximum**, après quoi il expire (le client vous recontacte si besoin d'un nouvel envoi).
+
+### Mise en place (une fois)
+
+1. **Stock/KV doit déjà être activé** (section 8) — la livraison numérique réutilise la même base Vercel KV pour stocker les jetons de téléchargement.
+2. **Héberger vos fichiers avec Vercel Blob** : dans votre projet Vercel, `Storage > Create Database > Blob` (gratuit jusqu'à un usage raisonnable). Une fois créé, ouvrez le store et **uploadez chaque fichier téléchargeable** (glisser-déposer) — copiez l'URL générée pour chaque fichier.
+3. **Créer un compte [Resend](https://resend.com)** (gratuit jusqu'à 3000 emails/mois) pour l'envoi d'emails. Récupérez une clé API (`Dashboard > API Keys`), ajoutez-la sur Vercel comme `RESEND_API_KEY`.
+   - Pour commencer sans configurer votre propre domaine d'envoi, laissez `FROM_EMAIL` non défini : les emails partiront de `onboarding@resend.dev` (fonctionne, mais moins professionnel). Pour utiliser votre propre adresse (ex. `boutique@votredomaine.com`), suivez la vérification de domaine dans Resend puis définissez `FROM_EMAIL` sur Vercel.
+4. **Ajouter l'événement au webhook Stripe existant** : Dashboard Stripe > `Développeurs > Webhooks`, ouvrez le point de terminaison déjà créé à la section 8, et ajoutez l'événement **`checkout.session.completed`** à la liste (en plus de `checkout.session.expired` et `checkout.session.async_payment_failed`).
+5. Redéployez le projet.
+
+### Utilisation au quotidien
+
+Dans `admin/index.html`, pour chaque produit téléchargeable, collez l'URL du fichier (obtenue à l'étape 2) dans le champ **« Fichier numérique (URL) »** du formulaire produit. Exportez et déployez comme d'habitude (section 5). Rien d'autre à faire : dès qu'un client paie ce produit, il reçoit l'email automatiquement.
+
+### Limites à connaître
+
+- Le fichier hébergé sur Vercel Blob a une URL publique mais très difficile à deviner (longue chaîne aléatoire) — le lien envoyé par email est une couche de protection supplémentaire (expiration + nombre d'utilisations limité), mais ce n'est pas un système d'authentification à part entière. Suffisant pour la grande majorité des petites boutiques, mais à garder en tête si vous vendez des fichiers de très haute valeur.
+- Un seul email est envoyé par commande, listant tous les produits téléchargeables achetés dans cette commande.
 
 ## Aller plus loin (suggestions restantes)
 

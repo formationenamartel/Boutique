@@ -170,6 +170,11 @@
         </select>
       </div>
     </div>
+    <div class="field">
+      <label>Fichier numérique (URL, optionnel)</label>
+      <input type="text" id="p-digital-file" placeholder="https://...vercel-storage.com/mon-fichier.pdf">
+      <p class="hint">Pour un produit téléchargeable : uploadez le fichier dans Vercel Blob (Storage &gt; votre Blob store) et collez son URL ici. Un lien de téléchargement sécurisé sera envoyé par email après paiement (voir section 9 du README).</p>
+    </div>
     <div class="row">
       <button class="btn" id="btn-save-product">Ajouter le produit</button>
       <button class="btn-outline btn" id="btn-cancel-edit" style="display:none;">Annuler la modification</button>
@@ -334,6 +339,7 @@
     const active = document.getElementById('p-active').value === 'true';
     const stockRaw = document.getElementById('p-stock').value.trim();
     const stock = stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10));
+    const digitalFileUrl = document.getElementById('p-digital-file').value.trim();
 
     if (!name) { toast('Le nom du produit est requis.'); return; }
     if (isNaN(priceMajor) || priceMajor < 0) { toast('Le prix est invalide.'); return; }
@@ -348,6 +354,7 @@
       product.description = description;
       product.active = active;
       product.stock = stock;
+      product.digitalFileUrl = digitalFileUrl || null;
       if (pendingImageDataUrl) {
         product.imageDataUrl = pendingImageDataUrl;
         product.imageFilename = pendingImageFilename;
@@ -361,6 +368,7 @@
         description,
         active,
         stock,
+        digitalFileUrl: digitalFileUrl || null,
         imageDataUrl: pendingImageDataUrl,
         imageFilename: pendingImageFilename,
       });
@@ -380,6 +388,7 @@
     document.getElementById('p-name').value = '';
     document.getElementById('p-price').value = '';
     document.getElementById('p-stock').value = '';
+    document.getElementById('p-digital-file').value = '';
     document.getElementById('p-description').value = '';
     document.getElementById('p-active').value = 'true';
     document.getElementById('p-image').value = '';
@@ -399,6 +408,7 @@
     document.getElementById('p-price').value = (p.price / 100).toFixed(2);
     document.getElementById('p-category').value = p.category;
     document.getElementById('p-stock').value = p.stock === null || p.stock === undefined ? '' : p.stock;
+    document.getElementById('p-digital-file').value = p.digitalFileUrl || '';
     document.getElementById('p-description').value = p.description || '';
     document.getElementById('p-active').value = String(p.active !== false);
     const preview = document.getElementById('image-preview');
@@ -534,6 +544,7 @@
         image: imagePath,
         active: p.active !== false,
         stock: p.stock === null || p.stock === undefined ? null : p.stock,
+        digitalFileUrl: p.digitalFileUrl || null,
       });
     }
 
@@ -590,6 +601,7 @@
           category: p.category,
           active: p.active !== false,
           stock: p.stock === null || p.stock === undefined ? null : p.stock,
+          digitalFileUrl: p.digitalFileUrl || null,
           imageDataUrl,
           imageFilename,
         });

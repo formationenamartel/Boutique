@@ -3,6 +3,7 @@
     "api/create-checkout-session.js": { "maxDuration": 10 },
     "api/webhook.js": { "maxDuration": 10 },
     "api/stock.js": { "maxDuration": 10 },
-    "api/stock-adjust.js": { "maxDuration": 10 }
+    "api/stock-adjust.js": { "maxDuration": 10 },
+    "api/download.js": { "maxDuration": 10 }
   }
 }
