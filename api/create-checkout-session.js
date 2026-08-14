@@ -39,7 +39,13 @@ export default async function handler(req, res) {
     const productsById = new Map((catalog.products || []).map((p) => [p.id, p]));
     const currency = (catalog.currency || 'eur').toLowerCase();
     const taxBehavior = catalog.taxBehavior === 'inclusive' ? 'inclusive' : 'exclusive';
-    const automaticTaxEnabled = process.env.ENABLE_AUTOMATIC_TAX === 'true';
+    // Taux manuels prioritaires sur Stripe Tax automatique : necessaire pour des cas comme
+    // l'exemption de TVQ sur les livres au Quebec, que Stripe Tax n'applique pas correctement
+    // avec un code fiscal generique (verifie empiriquement).
+    const gstRateId = process.env.STRIPE_TAX_RATE_GST;
+    const qstRateId = process.env.STRIPE_TAX_RATE_QST;
+    const manualTaxRatesEnabled = Boolean(gstRateId && qstRateId);
+    const automaticTaxEnabled = !manualTaxRatesEnabled && process.env.ENABLE_AUTOMATIC_TAX === 'true';
     const stockTrackingEnabled = Boolean(process.env.KV_REST_API_URL);
 
     const normalizedItems = [];
@@ -55,6 +61,9 @@ export default async function handler(req, res) {
 
       line_items.push({
         quantity,
+        tax_rates: manualTaxRatesEnabled
+          ? (product.qstExempt ? [gstRateId] : [gstRateId, qstRateId])
+          : undefined,
         price_data: {
           currency,
           unit_amount: product.price,

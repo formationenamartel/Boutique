@@ -123,7 +123,7 @@ Le catalogue de démo (`public/products.json`) est déjà configuré en dollars 
 
 Par défaut, chaque produit est taxé comme un **bien physique standard** (`txcd_99999999`). Si vous vendez des produits numériques, des services, ou des abonnements — dont le traitement fiscal peut différer — sélectionnez la **« Catégorie fiscale (Stripe Tax) »** appropriée directement dans le formulaire produit de l'admin (`admin/index.html`) : une liste des catégories les plus courantes est proposée, avec une option « Autre (code personnalisé) » pour entrer n'importe quel code manuellement. La liste complète des codes est disponible dans le [Tax Code Registry de Stripe](https://stripe.com/docs/tax/tax-codes).
 
-**Cas particulier des livres imprimés** : au moment d'écrire ces lignes, Stripe ne propose pas de code fiscal dédié aux livres imprimés physiques (seulement aux livres numériques) — le code générique « Bien général » sera donc utilisé, ce qui ne reflète pas l'exemption de TVQ applicable aux livres au Québec. Si cette exemption est importante pour vous, vérifiez directement auprès du support Stripe ou d'un comptable comment configurer un taux fixe pour cette catégorie de produits.
+**Cas particulier des livres imprimés** : Stripe ne propose pas de code fiscal dédié aux livres imprimés physiques, et **le calcul automatique de Stripe Tax applique à tort la TVQ dessus** (vérifié empiriquement — TPS 5 % + TVQ 9,975 % au lieu de TPS seule). Si vous vendez des livres, utilisez plutôt les **taux de taxe manuels** décrits à la section suivante.
 
 ### Codes promo
 
@@ -132,6 +132,28 @@ Déjà activé dans `api/create-checkout-session.js` (`allow_promotion_codes: tr
 1. Dashboard Stripe > `Produits > Coupons` : créez un coupon (ex. -10%, ou -5€, avec ou sans date d'expiration).
 2. `Produits > Codes promotionnels` : créez un code (ex. `BIENVENUE10`) lié à ce coupon.
 3. Vos clients l'utilisent directement sur la page de paiement — aucune action supplémentaire de votre part.
+
+## 7bis. Taux de taxe manuels (nécessaire pour les livres au Québec)
+
+Stripe Tax (automatique, section 7) calcule mal la taxe sur les livres imprimés — il applique la TVQ alors qu'elle ne devrait pas s'appliquer. Pour corriger ça, on contourne le calcul automatique avec des **taux fixes définis par vous**, appliqués directement sur chaque produit.
+
+**Important** : ce mode remplace complètement Stripe Tax automatique (les deux ne peuvent pas être actifs en même temps). Il applique toujours les taux du Québec (TPS 5 % + TVQ 9,975 %, sauf exemption), peu importe la province réelle du client — adapté si votre clientèle est essentiellement québécoise, mais moins précis si vous vendez ailleurs au Canada.
+
+### Mise en place (une fois)
+
+1. Dashboard Stripe (mode **Live**, puis répétez en mode **Test** si vous voulez tester) > `Produits > Taux de taxe` (ou `Tax rates`) > **Créer un taux de taxe**.
+2. Créez un premier taux : nom « TPS Canada », **5 %**, non inclusif. Notez son ID (`txr_...`).
+3. Créez un second taux : nom « TVQ Québec », **9,975 %**, non inclusif. Notez son ID (`txr_...`).
+4. Sur Vercel, ajoutez ces deux variables d'environnement :
+   - `STRIPE_TAX_RATE_GST` = l'ID du taux TPS
+   - `STRIPE_TAX_RATE_QST` = l'ID du taux TVQ
+5. Redéployez.
+
+Dès que ces deux variables sont présentes, tous les paiements utilisent automatiquement ces taux fixes (TPS + TVQ pour tout produit, sauf ceux marqués détaxés — voir ci-dessous), et `ENABLE_AUTOMATIC_TAX` est ignoré si défini.
+
+### Utilisation au quotidien
+
+Dans `admin/index.html`, cochez **« Livre détaxé de la TVQ »** sur chaque produit qui est un livre imprimé — seule la TPS (5 %) s'appliquera à ce produit. Laissez décoché pour tout autre produit (TPS + TVQ s'appliqueront normalement).
 
 ## 8. Gestion du stock (suivi automatique entre les commandes)
 

@@ -198,7 +198,12 @@
           <option value="custom">Autre (code personnalisé)...</option>
         </select>
         <input type="text" id="p-tax-code-custom" placeholder="ex : txcd_XXXXXXXX" style="display:none; margin-top:6px;">
-        <p class="hint">N'a d'effet que si les taxes automatiques sont activées (section 7 du README). Un livre <strong>imprimé</strong> n'a pas de catégorie dédiée chez Stripe — laissez "Bien général" pour l'instant, l'exemption de TVQ sur les livres nécessite une vérification séparée auprès de Stripe.</p>
+        <p class="hint">N'a d'effet que si les taxes automatiques (Stripe Tax) sont activées (section 7 du README). Sans effet si les taux de taxe manuels sont utilisés (section 7bis) — utilisez plutôt la case ci-dessous dans ce cas.</p>
+        <label style="display:flex; align-items:center; gap:8px; margin-top:10px; font-weight:600;">
+          <input type="checkbox" id="p-qst-exempt" style="width:auto;">
+          Livre détaxé de la TVQ (taux de taxe manuels uniquement)
+        </label>
+        <p class="hint">À cocher pour un livre imprimé si vous utilisez les taux de taxe manuels (TPS seule s'appliquera, pas de TVQ) — voir section 7bis du README.</p>
       </div>
     </div>
     <div class="row">
@@ -377,6 +382,7 @@
     const stock = stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10));
     const digitalFileUrl = document.getElementById('p-digital-file').value.trim();
     const taxCode = getSelectedTaxCode();
+    const qstExempt = document.getElementById('p-qst-exempt').checked;
 
     if (!name) { toast('Le nom du produit est requis.'); return; }
     if (isNaN(priceMajor) || priceMajor < 0) { toast('Le prix est invalide.'); return; }
@@ -393,6 +399,7 @@
       product.stock = stock;
       product.digitalFileUrl = digitalFileUrl || null;
       product.taxCode = taxCode || null;
+      product.qstExempt = qstExempt;
       if (pendingImageDataUrl) {
         product.imageDataUrl = pendingImageDataUrl;
         product.imageFilename = pendingImageFilename;
@@ -408,6 +415,7 @@
         stock,
         digitalFileUrl: digitalFileUrl || null,
         taxCode: taxCode || null,
+        qstExempt,
         imageDataUrl: pendingImageDataUrl,
         imageFilename: pendingImageFilename,
       });
@@ -431,6 +439,7 @@
     document.getElementById('p-tax-code').value = '';
     document.getElementById('p-tax-code-custom').value = '';
     document.getElementById('p-tax-code-custom').style.display = 'none';
+    document.getElementById('p-qst-exempt').checked = false;
     document.getElementById('p-description').value = '';
     document.getElementById('p-active').value = 'true';
     document.getElementById('p-image').value = '';
@@ -467,6 +476,7 @@
       taxCustom.value = p.taxCode;
       taxCustom.style.display = 'block';
     }
+    document.getElementById('p-qst-exempt').checked = Boolean(p.qstExempt);
     document.getElementById('p-description').value = p.description || '';
     document.getElementById('p-active').value = String(p.active !== false);
     const preview = document.getElementById('image-preview');
@@ -604,6 +614,7 @@
         stock: p.stock === null || p.stock === undefined ? null : p.stock,
         digitalFileUrl: p.digitalFileUrl || null,
         taxCode: p.taxCode || null,
+        qstExempt: Boolean(p.qstExempt),
       });
     }
 
@@ -662,6 +673,7 @@
           stock: p.stock === null || p.stock === undefined ? null : p.stock,
           digitalFileUrl: p.digitalFileUrl || null,
           taxCode: p.taxCode || null,
+          qstExempt: Boolean(p.qstExempt),
           imageDataUrl,
           imageFilename,
         });

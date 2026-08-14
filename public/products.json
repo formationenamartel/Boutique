@@ -15,7 +15,8 @@
       "price": 500,
       "category": "livres",
       "image": "images/produit-b.svg",
-      "active": true
+      "active": true,
+      "qstExempt": true
     },
     {
       "id": "prod-digital-001",
