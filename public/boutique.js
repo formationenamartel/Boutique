@@ -5,6 +5,7 @@
     const productsUrl = root.dataset.productsUrl;
     const apiUrl = root.dataset.apiUrl;
     const stockUrl = root.dataset.stockUrl;
+    const siteId = root.dataset.siteId || null;
     if (!productsUrl || !apiUrl) {
       root.innerHTML = '<p class="boutique-empty">Configuration manquante : data-products-url et data-api-url sont requis.</p>';
       return;
@@ -19,6 +20,15 @@
     function availableStock(productId) {
       const level = stockLevels[productId];
       return level === undefined ? null : level; // pas de data = pas de limite connue
+    }
+
+    // Sans data-site-id sur le conteneur, tous les produits sont visibles (utile pour une page
+    // "catalogue complet" ou pour tester). Avec data-site-id, un produit sans "sites" assigne
+    // reste visible partout ; un produit avec "sites" n'apparait que sur les sites listes.
+    function getSiteProducts() {
+      const products = catalog.products || [];
+      if (!siteId) return products;
+      return products.filter((p) => !p.sites || p.sites.length === 0 || p.sites.includes(siteId));
     }
 
     root.classList.add('boutique');
@@ -78,7 +88,8 @@
 
     function renderCategories() {
       const el = root.querySelector('[data-el="categories"]');
-      const categories = catalog.categories || [];
+      const visibleCategoryIds = new Set(getSiteProducts().map((p) => p.category));
+      const categories = (catalog.categories || []).filter((c) => visibleCategoryIds.has(c.id));
       const buttons = [{ id: 'all', name: 'Tout' }].concat(categories);
       el.innerHTML = '';
       buttons.forEach((cat) => {
@@ -96,7 +107,7 @@
 
     function renderGrid() {
       const el = root.querySelector('[data-el="grid"]');
-      const products = (catalog.products || []).filter(
+      const products = getSiteProducts().filter(
         (p) => p.active !== false && (activeCategory === 'all' || p.category === activeCategory)
       );
       if (products.length === 0) {

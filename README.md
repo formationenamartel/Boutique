@@ -70,6 +70,23 @@ Vous pouvez placer plusieurs de ces blocs sur des sites différents : ils pointe
 
 Personnalisation visuelle : les couleurs sont pilotées par des variables CSS (`--boutique-primary`, `--boutique-accent`, etc.) sur la classe `.boutique` — surchargez-les dans le CSS de votre site si besoin.
 
+### Afficher des produits différents selon le site
+
+Si vous intégrez la boutique sur plusieurs sites (ex. plusieurs entreprises), vous pouvez limiter les produits affichés sur chacun sans dupliquer le catalogue. Ajoutez l'attribut `data-site-id` au bloc d'intégration :
+
+```html
+<div
+  data-boutique-root
+  data-products-url="https://votre-projet.vercel.app/products.json"
+  data-api-url="https://votre-projet.vercel.app/api/create-checkout-session"
+  data-site-id="aide-informatique"
+></div>
+```
+
+Puis, dans `admin/index.html`, cochez le ou les sites où chaque produit doit apparaître (section « Sites » du formulaire produit). Un produit sans site coché reste visible partout — utile pour un produit commun à tous vos sites. Sans `data-site-id` sur le bloc d'intégration, tous les produits actifs s'affichent (comme sur `public/demo.html`), peu importe les sites cochés.
+
+Notez que le catalogue reste techniquement accessible en entier via `products.json` (le filtrage se fait côté navigateur) — adapté pour organiser l'affichage entre vos propres sites, mais pas conçu comme un cloisonnement strict entre plusieurs marchands indépendants.
+
 ## 5. Gérer vos produits au quotidien
 
 1. Ouvrez `admin/index.html` directement dans votre navigateur (double-clic, aucune installation).

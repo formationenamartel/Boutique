@@ -23,6 +23,9 @@
     - data-api-url       : URL de la fonction Stripe déployée sur Vercel
     - data-stock-url     : (optionnel) URL de l'endpoint de lecture de stock, si vous avez activé
                             le suivi de stock (Vercel KV). Omettez cet attribut sinon.
+    - data-site-id       : (optionnel) identifiant du site, pour n'afficher que les produits
+                            assignés à ce site dans l'admin (ex: "aide-informatique"). Omettez cet
+                            attribut pour afficher tous les produits (comme ici, sur cette démo).
   -->
   <div
     data-boutique-root
@@ -30,6 +33,16 @@
     data-api-url="/api/create-checkout-session"
     data-stock-url="/api/stock"
   ></div>
+
+  <!-- Exemple d'intégration sur un site spécifique (à copier sur aide-informatique.com par ex.) :
+  <div
+    data-boutique-root
+    data-products-url="https://boutique-one-xi.vercel.app/products.json"
+    data-api-url="https://boutique-one-xi.vercel.app/api/create-checkout-session"
+    data-stock-url="https://boutique-one-xi.vercel.app/api/stock"
+    data-site-id="aide-informatique"
+  ></div>
+  -->
 
   <script src="boutique.js"></script>
 </body>

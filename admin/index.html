@@ -206,6 +206,11 @@
         <p class="hint">À cocher pour un livre imprimé si vous utilisez les taux de taxe manuels (TPS seule s'appliquera, pas de TVQ) — voir section 7bis du README.</p>
       </div>
     </div>
+    <div class="field">
+      <label>Sites (laisser tout décoché = visible sur tous les sites)</label>
+      <div id="p-sites" class="row" style="gap:16px;"></div>
+      <p class="hint">Cochez le ou les sites où ce produit doit apparaître. Sur chaque site, le bloc d'intégration du widget doit porter l'attribut <code>data-site-id</code> correspondant (voir section 4 du README) pour que le filtrage fonctionne.</p>
+    </div>
     <div class="row">
       <button class="btn" id="btn-save-product">Ajouter le produit</button>
       <button class="btn-outline btn" id="btn-cancel-edit" style="display:none;">Annuler la modification</button>
@@ -259,11 +264,41 @@
   'use strict';
 
   const STORAGE_KEY = 'boutique_admin_draft_v1';
+  const SITES = [
+    { id: 'aide-informatique', label: 'aide-informatique.com' },
+    { id: 'audeladusouvenir', label: 'audeladusouvenir.com' },
+    { id: 'importbargainbazaar', label: 'importbargainbazaar.com' },
+    { id: 'entreprisesservices', label: 'entreprisesservices.com' },
+    { id: 'beyondyourmemory', label: 'beyondyourmemory.com' },
+    { id: 'productionsalainmartel', label: 'productionsalainmartel.com' },
+  ];
   let state = { currency: 'cad', taxBehavior: 'exclusive', categories: [], products: [] };
   let editingId = null;
 
   function uid(prefix) {
     return prefix + '-' + Math.random().toString(36).slice(2, 8);
+  }
+
+  function renderSiteCheckboxes() {
+    const container = document.getElementById('p-sites');
+    container.innerHTML = SITES.map(
+      (s) =>
+        '<label style="display:flex; align-items:center; gap:6px; font-weight:400;">' +
+        '<input type="checkbox" class="p-site-cb" value="' + s.id + '" style="width:auto;"> ' + s.label +
+        '</label>'
+    ).join('');
+  }
+  renderSiteCheckboxes();
+
+  function getSelectedSites() {
+    return Array.from(document.querySelectorAll('.p-site-cb:checked')).map((cb) => cb.value);
+  }
+
+  function setSelectedSites(sites) {
+    const selected = new Set(sites || []);
+    document.querySelectorAll('.p-site-cb').forEach((cb) => {
+      cb.checked = selected.has(cb.value);
+    });
   }
 
   function slug(str) {
@@ -383,6 +418,7 @@
     const digitalFileUrl = document.getElementById('p-digital-file').value.trim();
     const taxCode = getSelectedTaxCode();
     const qstExempt = document.getElementById('p-qst-exempt').checked;
+    const sites = getSelectedSites();
 
     if (!name) { toast('Le nom du produit est requis.'); return; }
     if (isNaN(priceMajor) || priceMajor < 0) { toast('Le prix est invalide.'); return; }
@@ -400,6 +436,7 @@
       product.digitalFileUrl = digitalFileUrl || null;
       product.taxCode = taxCode || null;
       product.qstExempt = qstExempt;
+      product.sites = sites;
       if (pendingImageDataUrl) {
         product.imageDataUrl = pendingImageDataUrl;
         product.imageFilename = pendingImageFilename;
@@ -416,6 +453,7 @@
         digitalFileUrl: digitalFileUrl || null,
         taxCode: taxCode || null,
         qstExempt,
+        sites,
         imageDataUrl: pendingImageDataUrl,
         imageFilename: pendingImageFilename,
       });
@@ -440,6 +478,7 @@
     document.getElementById('p-tax-code-custom').value = '';
     document.getElementById('p-tax-code-custom').style.display = 'none';
     document.getElementById('p-qst-exempt').checked = false;
+    setSelectedSites([]);
     document.getElementById('p-description').value = '';
     document.getElementById('p-active').value = 'true';
     document.getElementById('p-image').value = '';
@@ -477,6 +516,7 @@
       taxCustom.style.display = 'block';
     }
     document.getElementById('p-qst-exempt').checked = Boolean(p.qstExempt);
+    setSelectedSites(p.sites || []);
     document.getElementById('p-description').value = p.description || '';
     document.getElementById('p-active').value = String(p.active !== false);
     const preview = document.getElementById('image-preview');
@@ -615,6 +655,7 @@
         digitalFileUrl: p.digitalFileUrl || null,
         taxCode: p.taxCode || null,
         qstExempt: Boolean(p.qstExempt),
+        sites: Array.isArray(p.sites) ? p.sites : [],
       });
     }
 
@@ -674,6 +715,7 @@
           digitalFileUrl: p.digitalFileUrl || null,
           taxCode: p.taxCode || null,
           qstExempt: Boolean(p.qstExempt),
+          sites: Array.isArray(p.sites) ? p.sites : [],
           imageDataUrl,
           imageFilename,
         });
