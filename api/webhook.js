@@ -37,7 +37,7 @@ async function sendDownloadEmail(toEmail, items) {
       from,
       to: [toEmail],
       subject: 'Vos telechargements sont prets',
-      html: `<p>Merci pour votre achat ! Voici vos liens de telechargement (valides 7 jours, jusqu'a 5 utilisations) :</p><ul>${linksHtml}</ul>`,
+      html: `<p>Merci pour votre achat ! Voici vos liens de telechargement (valides 7 jours, jusqu'a 3 utilisations) :</p><ul>${linksHtml}</ul>`,
     }),
   });
 

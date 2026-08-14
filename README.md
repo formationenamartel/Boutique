@@ -163,7 +163,7 @@ Fonctionnement : quand un client clique sur « Passer la commande », la quantit
 
 Pour un produit téléchargeable (ebook, logiciel, fichier de service, etc.), la boutique peut envoyer automatiquement un **email avec un lien de téléchargement sécurisé** dès que le paiement est confirmé — pas besoin de le faire manuellement.
 
-Fonctionnement : le lien envoyé n'est pas le fichier lui-même, mais une adresse de votre boutique (`/api/download?token=...`) qui vérifie un jeton à usage limité avant de rediriger vers le fichier réel. Chaque lien est valide **7 jours** et **5 téléchargements maximum**, après quoi il expire (le client vous recontacte si besoin d'un nouvel envoi).
+Fonctionnement : le lien envoyé n'est pas le fichier lui-même, mais une adresse de votre boutique (`/api/download?token=...`) qui vérifie un jeton à usage limité avant de rediriger vers le fichier réel. Chaque lien est valide **7 jours** et **3 téléchargements maximum**, après quoi il expire (le client vous recontacte si besoin d'un nouvel envoi).
 
 ### Mise en place (une fois)
 
