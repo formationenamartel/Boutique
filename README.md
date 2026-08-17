@@ -96,6 +96,14 @@ Notez que le catalogue reste techniquement accessible en entier via `products.js
 5. Décompressez et remplacez les fichiers correspondants sur votre hébergement (dans `public/`).
 6. Pour continuer à modifier plus tard, utilisez **Importer un ZIP existant** avec votre dernier export.
 
+### Code produit (SKU) et code-barres, pour un point de vente
+
+Chaque produit a deux champs optionnels :
+- **Code produit (SKU)** : un identifiant lisible (ex. `LIV-0001`), généré automatiquement par catégorie (bouton **Générer**) ou modifiable librement.
+- **Code-barres (EAN-13)** : généré dans la plage réservée par GS1 à l'usage interne (préfixe `20`-`29`), avec un chiffre de contrôle valide — scannable en magasin, mais pas destiné à la revente via un distributeur externe (qui exigerait un préfixe d'entreprise officiel enregistré auprès de GS1).
+
+Le bouton **Exporter CSV (point de vente)** génère un fichier `boutique-produits.csv` (SKU, code-barres, nom, description, prix, devise, catégorie, stock, actif) à importer dans votre système de point de vente. Le format des colonnes attendues varie d'un système à l'autre — vérifiez la documentation d'import de votre logiciel (ex. Best POS, Azimutpos) si l'import échoue.
+
 ## 6. Tester avant de passer en production
 
 1. Utilisez d'abord votre clé Stripe **de test** (`sk_test_...`) dans `STRIPE_SECRET_KEY`.

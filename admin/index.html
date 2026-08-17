@@ -92,6 +92,7 @@
     <h2>Import / Export</h2>
     <div class="row">
       <button class="btn" id="btn-export">Exporter (ZIP)</button>
+      <button class="btn-outline btn" id="btn-export-csv">Exporter CSV (point de vente)</button>
       <button class="btn-outline btn" id="btn-import">Importer un ZIP existant</button>
       <input type="file" id="import-input" accept=".zip" style="display:none">
       <button class="btn-outline btn" id="btn-reset">Recommencer à zéro</button>
@@ -113,7 +114,7 @@
         </select>
       </div>
     </div>
-    <p class="hint">L'export produit un fichier ZIP contenant <code>products.json</code> et le dossier <code>images/</code>. Copiez leur contenu dans le dossier <code>public</code> de votre site (à côté de <code>boutique.js</code> et <code>boutique.css</code>), en remplaçant les fichiers existants.</p>
+    <p class="hint">L'export ZIP contient <code>products.json</code> et le dossier <code>images/</code> — à copier dans le dossier <code>public</code> de votre site, en remplaçant les fichiers existants. L'export CSV est un format générique (SKU, code-barres, nom, prix, catégorie, stock) à essayer avec votre système de point de vente — vérifiez ses colonnes d'import attendues si l'import échoue, le format exact peut varier d'un système à l'autre.</p>
     <p class="hint">Le réglage « Prix saisis ci-dessous » n'a d'effet que si vous activez Stripe Tax côté serveur (voir README) — sinon les prix sont simplement facturés tels quels, sans calcul de taxe automatique.</p>
   </div>
 
@@ -150,6 +151,23 @@
         <label>Stock initial</label>
         <input type="number" step="1" min="0" id="p-stock" placeholder="Illimité">
         <p class="hint">Laissez vide pour un produit sans quantité à gérer (ex : téléchargement, service).</p>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field" style="max-width:220px;">
+        <label>Code produit (SKU)</label>
+        <div class="row" style="gap:6px;">
+          <input type="text" id="p-sku" placeholder="ex : LIV-0001" style="flex:1;">
+          <button type="button" class="btn-outline btn btn-sm" id="btn-gen-sku">Générer</button>
+        </div>
+      </div>
+      <div class="field" style="max-width:260px;">
+        <label>Code-barres (EAN-13)</label>
+        <div class="row" style="gap:6px;">
+          <input type="text" id="p-barcode" placeholder="ex : 2012345678905" style="flex:1;">
+          <button type="button" class="btn-outline btn btn-sm" id="btn-gen-barcode">Générer</button>
+        </div>
+        <p class="hint">Généré dans la plage GS1 réservée à l'usage interne (préfixe 20-29) — valide pour scanner en magasin, mais pas destiné à la revente via un distributeur externe.</p>
       </div>
     </div>
     <div class="field">
@@ -220,7 +238,7 @@
   <div class="panel">
     <h2>Produits (<span id="product-count">0</span>)</h2>
     <table>
-      <thead><tr><th></th><th>Nom</th><th>Catégorie</th><th>Prix</th><th>Stock</th><th>Actif</th><th></th></tr></thead>
+      <thead><tr><th></th><th>Nom</th><th>SKU</th><th>Catégorie</th><th>Prix</th><th>Stock</th><th>Actif</th><th></th></tr></thead>
       <tbody id="products-table-body"></tbody>
     </table>
   </div>
@@ -299,6 +317,43 @@
     document.querySelectorAll('.p-site-cb').forEach((cb) => {
       cb.checked = selected.has(cb.value);
     });
+  }
+
+  // ---------- SKU / code-barres ----------
+
+  function generateSku(categoryId) {
+    const prefix = (categoryId || 'GEN').replace(/[^a-z0-9]/gi, '').slice(0, 3).toUpperCase() || 'GEN';
+    const existing = state.products.filter((p) => p.sku && p.sku.startsWith(prefix + '-'));
+    let n = existing.length + 1;
+    let sku = prefix + '-' + String(n).padStart(4, '0');
+    const taken = new Set(state.products.map((p) => p.sku).filter(Boolean));
+    while (taken.has(sku)) {
+      n++;
+      sku = prefix + '-' + String(n).padStart(4, '0');
+    }
+    return sku;
+  }
+
+  // Hash simple et stable (djb2) pour deriver un code-barres reproductible d'un id produit.
+  function hashToDigits(str, digitCount) {
+    let hash = 5381;
+    for (let i = 0; i < str.length; i++) {
+      hash = ((hash << 5) + hash + str.charCodeAt(i)) >>> 0;
+    }
+    return String(hash).padStart(digitCount, '0').slice(-digitCount);
+  }
+
+  // EAN-13 dans la plage GS1 reservee a l'usage interne (prefixe 20-29), avec chiffre de controle valide.
+  function generateEan13(seed) {
+    const prefix = '2' + String(Math.floor(Math.random() * 10));
+    const body = prefix + hashToDigits(seed + Date.now(), 10);
+    const digits = body.split('').map(Number);
+    let sum = 0;
+    for (let i = 0; i < 12; i++) {
+      sum += digits[i] * (i % 2 === 0 ? 1 : 3);
+    }
+    const checkDigit = (10 - (sum % 10)) % 10;
+    return body + checkDigit;
   }
 
   function slug(str) {
@@ -407,6 +462,15 @@
     return select;
   }
 
+  document.getElementById('btn-gen-sku').addEventListener('click', () => {
+    document.getElementById('p-sku').value = generateSku(document.getElementById('p-category').value);
+  });
+
+  document.getElementById('btn-gen-barcode').addEventListener('click', () => {
+    const seed = editingId || document.getElementById('p-name').value || String(Date.now());
+    document.getElementById('p-barcode').value = generateEan13(seed);
+  });
+
   document.getElementById('btn-save-product').addEventListener('click', () => {
     const name = document.getElementById('p-name').value.trim();
     const priceMajor = parseFloat(document.getElementById('p-price').value);
@@ -419,11 +483,17 @@
     const taxCode = getSelectedTaxCode();
     const qstExempt = document.getElementById('p-qst-exempt').checked;
     const sites = getSelectedSites();
+    const sku = document.getElementById('p-sku').value.trim();
+    const barcode = document.getElementById('p-barcode').value.trim();
 
     if (!name) { toast('Le nom du produit est requis.'); return; }
     if (isNaN(priceMajor) || priceMajor < 0) { toast('Le prix est invalide.'); return; }
     if (!category) { toast('Créez au moins une catégorie avant d\'ajouter un produit.'); return; }
     if (stockRaw !== '' && isNaN(stock)) { toast('Le stock doit être un nombre entier, ou vide pour illimité.'); return; }
+    if (sku && state.products.some((p) => p.sku === sku && p.id !== editingId)) {
+      toast('Ce SKU est déjà utilisé par un autre produit.');
+      return;
+    }
 
     if (editingId) {
       const product = state.products.find((p) => p.id === editingId);
@@ -437,6 +507,8 @@
       product.taxCode = taxCode || null;
       product.qstExempt = qstExempt;
       product.sites = sites;
+      product.sku = sku || null;
+      product.barcode = barcode || null;
       if (pendingImageDataUrl) {
         product.imageDataUrl = pendingImageDataUrl;
         product.imageFilename = pendingImageFilename;
@@ -454,6 +526,8 @@
         taxCode: taxCode || null,
         qstExempt,
         sites,
+        sku: sku || null,
+        barcode: barcode || null,
         imageDataUrl: pendingImageDataUrl,
         imageFilename: pendingImageFilename,
       });
@@ -479,6 +553,8 @@
     document.getElementById('p-tax-code-custom').style.display = 'none';
     document.getElementById('p-qst-exempt').checked = false;
     setSelectedSites([]);
+    document.getElementById('p-sku').value = '';
+    document.getElementById('p-barcode').value = '';
     document.getElementById('p-description').value = '';
     document.getElementById('p-active').value = 'true';
     document.getElementById('p-image').value = '';
@@ -517,6 +593,8 @@
     }
     document.getElementById('p-qst-exempt').checked = Boolean(p.qstExempt);
     setSelectedSites(p.sites || []);
+    document.getElementById('p-sku').value = p.sku || '';
+    document.getElementById('p-barcode').value = p.barcode || '';
     document.getElementById('p-description').value = p.description || '';
     document.getElementById('p-active').value = String(p.active !== false);
     const preview = document.getElementById('image-preview');
@@ -549,6 +627,7 @@
       tr.innerHTML =
         '<td><img class="thumb" src="' + (p.imageDataUrl || '') + '" alt=""></td>' +
         '<td>' + escapeHtml(p.name) + '</td>' +
+        '<td class="muted">' + escapeHtml(p.sku || '—') + '</td>' +
         '<td><span class="pill">' + escapeHtml(catNameById.get(p.category) || p.category) + '</span></td>' +
         '<td>' + formatPrice(p.price) + '</td>' +
         '<td>' + (p.stock === null || p.stock === undefined ? 'Illimité' : p.stock) + '</td>' +
@@ -656,6 +735,8 @@
         taxCode: p.taxCode || null,
         qstExempt: Boolean(p.qstExempt),
         sites: Array.isArray(p.sites) ? p.sites : [],
+        sku: p.sku || null,
+        barcode: p.barcode || null,
       });
     }
 
@@ -669,6 +750,41 @@
     a.click();
     URL.revokeObjectURL(url);
     toast('Export généré.');
+  });
+
+  document.getElementById('btn-export-csv').addEventListener('click', () => {
+    if (state.products.length === 0) {
+      toast('Ajoutez au moins un produit avant d\'exporter.');
+      return;
+    }
+    const catNameById = new Map(state.categories.map((c) => [c.id, c.name]));
+    const header = ['SKU', 'Code-barres', 'Nom', 'Description', 'Prix', 'Devise', 'Categorie', 'Stock', 'Actif'];
+    const rows = state.products.map((p) => [
+      p.sku || '',
+      p.barcode || '',
+      p.name,
+      p.description || '',
+      (p.price / 100).toFixed(2),
+      state.currency.toUpperCase(),
+      catNameById.get(p.category) || p.category,
+      p.stock === null || p.stock === undefined ? '' : p.stock,
+      p.active !== false ? 'Oui' : 'Non',
+    ]);
+
+    function csvEscape(value) {
+      const str = String(value);
+      return /[",\n]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
+    }
+
+    const csv = [header, ...rows].map((row) => row.map(csvEscape).join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'boutique-produits.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Export CSV généré.');
   });
 
   // ---------- Import ----------
@@ -716,6 +832,8 @@
           taxCode: p.taxCode || null,
           qstExempt: Boolean(p.qstExempt),
           sites: Array.isArray(p.sites) ? p.sites : [],
+          sku: p.sku || null,
+          barcode: p.barcode || null,
           imageDataUrl,
           imageFilename,
         });
