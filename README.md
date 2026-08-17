@@ -252,6 +252,7 @@ Le site d'origine d'une vente est enregistré automatiquement si le bloc d'inté
 ### Limites à connaître
 
 - Le rapport interroge Stripe en direct à chaque génération (pas de base de données de ventes séparée) — pour une période avec beaucoup de commandes (plus de 500), le rapport est tronqué ; réduisez la plage de dates dans ce cas.
+- La fonction est limitée à 10 secondes d'exécution (plan Vercel Hobby). Pour une période avec beaucoup de commandes, ça peut ne pas suffire et renvoyer une erreur — dans ce cas, réduisez la plage de dates (ex. un mois à la fois plutôt qu'une année) et cumulez plusieurs rapports.
 - Un produit supprimé du catalogue après une vente apparaît comme « Produit supprimé du catalogue » dans le rapport (l'historique Stripe reste intact, mais on ne peut plus retrouver son SKU/catégorie).
 
 ## Aller plus loin (suggestions restantes)
