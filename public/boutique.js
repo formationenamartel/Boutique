@@ -219,6 +219,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             items: cart.map((i) => ({ id: i.id, quantity: i.quantity })),
+            siteId: siteId || undefined,
             successUrl: window.location.origin + window.location.pathname + '?paiement=succes',
             cancelUrl: window.location.origin + window.location.pathname + '?paiement=annule',
           }),

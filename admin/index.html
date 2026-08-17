@@ -268,6 +268,45 @@
   </div>
 
   <div class="panel">
+    <h2>Rapports de vente</h2>
+    <p class="hint">Utilise la même URL d'API et le même jeton admin que le panneau « Stock en ligne » ci-dessus. Interroge directement Stripe pour les paiements confirmés sur la période choisie — les montants « Revenu » sont hors taxes (base pour un partage/dividende), « Encaissé » inclut les taxes.</p>
+    <div class="row">
+      <div class="field" style="max-width:200px;">
+        <label>Date de début</label>
+        <input type="date" id="report-start">
+      </div>
+      <div class="field" style="max-width:200px;">
+        <label>Date de fin</label>
+        <input type="date" id="report-end">
+      </div>
+      <div class="field" style="max-width:200px; align-self:flex-end;">
+        <button class="btn" id="btn-run-report">Générer le rapport</button>
+      </div>
+    </div>
+    <div id="report-results" style="display:none;">
+      <div class="row" style="margin:14px 0;">
+        <div class="field"><strong>Commandes : </strong><span id="report-order-count">0</span></div>
+        <div class="field"><strong>Revenu total (hors taxes) : </strong><span id="report-total-revenue">—</span></div>
+        <div class="field"><strong>Encaissé total (taxes incl.) : </strong><span id="report-total-collected">—</span></div>
+      </div>
+      <p class="hint" id="report-truncated-note" style="display:none; color:#c0392b;">Rapport limité aux 500 premières commandes de la période — réduisez la plage de dates pour un résultat complet.</p>
+
+      <h3>Par catégorie</h3>
+      <table><thead><tr><th>Catégorie</th><th>Quantité</th><th>Revenu</th><th>Encaissé</th><th>Commandes</th></tr></thead><tbody id="report-by-category"></tbody></table>
+
+      <h3 style="margin-top:20px;">Par article</h3>
+      <table><thead><tr><th>SKU</th><th>Produit</th><th>Quantité</th><th>Revenu</th><th>Encaissé</th><th>Commandes</th></tr></thead><tbody id="report-by-product"></tbody></table>
+
+      <h3 style="margin-top:20px;">Par site</h3>
+      <table><thead><tr><th>Site</th><th>Quantité</th><th>Revenu</th><th>Encaissé</th><th>Commandes</th></tr></thead><tbody id="report-by-site"></tbody></table>
+
+      <div class="row" style="margin-top:16px;">
+        <button class="btn-outline btn" id="btn-export-report-csv">Exporter le détail (CSV)</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
     <h2>Aperçu</h2>
     <div id="preview" class="boutique">
       <div class="boutique-grid" id="preview-grid"></div>
@@ -952,6 +991,92 @@
       toast('Ajustement impossible : ' + err.message);
     }
   }
+
+  // ---------- Rapports de vente ----------
+
+  let lastReport = null;
+
+  function formatMoney(cents, currency) {
+    try {
+      return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: (currency || state.currency).toUpperCase() }).format(cents / 100);
+    } catch {
+      return (cents / 100).toFixed(2);
+    }
+  }
+
+  document.getElementById('btn-run-report').addEventListener('click', async () => {
+    const config = saveApiConfig();
+    if (!config.baseUrl || !config.token) { toast('Renseignez l\'URL de l\'API et le jeton admin (panneau Stock en ligne).'); return; }
+    const startVal = document.getElementById('report-start').value;
+    const endVal = document.getElementById('report-end').value;
+    if (!startVal || !endVal) { toast('Choisissez une date de début et de fin.'); return; }
+
+    const start = Math.floor(new Date(startVal + 'T00:00:00').getTime() / 1000);
+    const end = Math.floor(new Date(endVal + 'T23:59:59').getTime() / 1000);
+    if (end <= start) { toast('La date de fin doit être après la date de début.'); return; }
+
+    const btn = document.getElementById('btn-run-report');
+    btn.disabled = true;
+    btn.textContent = 'Génération...';
+    try {
+      const response = await fetch(config.baseUrl + '/api/sales-report?start=' + start + '&end=' + end, {
+        headers: { Authorization: 'Bearer ' + config.token },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erreur inconnue');
+      lastReport = data;
+      renderReport(data);
+      toast('Rapport généré.');
+    } catch (err) {
+      toast('Impossible de générer le rapport : ' + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Générer le rapport';
+    }
+  });
+
+  function renderReport(data) {
+    document.getElementById('report-results').style.display = 'block';
+    document.getElementById('report-order-count').textContent = data.orderCount;
+    document.getElementById('report-total-revenue').textContent = formatMoney(data.totalRevenue, data.currency);
+    document.getElementById('report-total-collected').textContent = formatMoney(data.totalCollected, data.currency);
+    document.getElementById('report-truncated-note').style.display = data.truncated ? 'block' : 'none';
+
+    document.getElementById('report-by-category').innerHTML = data.byCategory
+      .map((r) => '<tr><td>' + escapeHtml(r.categoryName) + '</td><td>' + r.quantity + '</td><td>' + formatMoney(r.revenue, data.currency) + '</td><td>' + formatMoney(r.collected, data.currency) + '</td><td>' + r.orderCount + '</td></tr>')
+      .join('') || '<tr><td colspan="5" class="muted">Aucune vente sur cette période.</td></tr>';
+
+    document.getElementById('report-by-product').innerHTML = data.byProduct
+      .map((r) => '<tr><td>' + escapeHtml(r.sku || '—') + '</td><td>' + escapeHtml(r.productName) + '</td><td>' + r.quantity + '</td><td>' + formatMoney(r.revenue, data.currency) + '</td><td>' + formatMoney(r.collected, data.currency) + '</td><td>' + r.orderCount + '</td></tr>')
+      .join('') || '<tr><td colspan="6" class="muted">Aucune vente sur cette période.</td></tr>';
+
+    document.getElementById('report-by-site').innerHTML = data.bySite
+      .map((r) => '<tr><td>' + escapeHtml(r.siteId) + '</td><td>' + r.quantity + '</td><td>' + formatMoney(r.revenue, data.currency) + '</td><td>' + formatMoney(r.collected, data.currency) + '</td><td>' + r.orderCount + '</td></tr>')
+      .join('') || '<tr><td colspan="5" class="muted">Aucune vente sur cette période.</td></tr>';
+  }
+
+  document.getElementById('btn-export-report-csv').addEventListener('click', () => {
+    if (!lastReport || lastReport.lines.length === 0) { toast('Générez d\'abord un rapport contenant des ventes.'); return; }
+
+    function csvEscape(value) {
+      const str = String(value);
+      return /[",\n]/.test(str) ? '"' + str.replace(/"/g, '""') + '"' : str;
+    }
+
+    const header = ['Date', 'Site', 'SKU', 'Produit', 'Categorie', 'Quantite', 'Revenu', 'Encaisse', 'Devise', 'ID commande'];
+    const rows = lastReport.lines.map((l) => [
+      l.date, l.siteId, l.sku, l.productName, l.categoryName, l.quantity,
+      (l.revenue / 100).toFixed(2), (l.collected / 100).toFixed(2), l.currency, l.sessionId,
+    ]);
+    const csv = [header, ...rows].map((row) => row.map(csvEscape).join(',')).join('\r\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'rapport-ventes.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  });
 
   // ---------- Démarrage ----------
 

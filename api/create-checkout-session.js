@@ -28,7 +28,8 @@ export default async function handler(req, res) {
   let reservedItems = [];
 
   try {
-    const { items, successUrl, cancelUrl } = req.body || {};
+    const { items, successUrl, cancelUrl, siteId } = req.body || {};
+    const sanitizedSiteId = typeof siteId === 'string' && /^[a-z0-9-]{1,60}$/i.test(siteId) ? siteId : null;
 
     if (!Array.isArray(items) || items.length === 0) {
       res.status(400).json({ error: 'Le panier est vide.' });
@@ -109,6 +110,7 @@ export default async function handler(req, res) {
       success_url: finalSuccessUrl,
       cancel_url: finalCancelUrl,
       allow_promotion_codes: true,
+      metadata: sanitizedSiteId ? { siteId: sanitizedSiteId } : undefined,
       expires_at: reservedItems.length > 0 ? Math.floor(Date.now() / 1000) + RESERVATION_WINDOW_SECONDS : undefined,
       shipping_address_collection: process.env.SHIP_TO_COUNTRIES
         ? { allowed_countries: process.env.SHIP_TO_COUNTRIES.split(',').map((c) => c.trim()) }

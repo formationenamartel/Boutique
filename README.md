@@ -42,7 +42,7 @@ Une fois hébergé, notez l'URL publique de votre `products.json`, par exemple :
    | `SHIP_TO_COUNTRIES` *(optionnel)* | `CA,US` | Si vous vendez des produits physiques, pays de livraison acceptés par Stripe |
    | `ENABLE_AUTOMATIC_TAX` *(optionnel)* | `true` | Active le calcul automatique de la TVA/taxes via Stripe Tax (voir section 7) |
    | `STRIPE_WEBHOOK_SECRET` *(optionnel)* | `whsec_...` | Requis pour le suivi de stock (section 8) et/ou la livraison numérique (section 9) |
-   | `ADMIN_STOCK_TOKEN` *(optionnel)* | une chaîne aléatoire longue | Requis uniquement si vous activez le suivi de stock (voir section 8) |
+   | `ADMIN_STOCK_TOKEN` *(optionnel)* | une chaîne aléatoire longue | Requis pour le suivi de stock (section 8) et/ou les rapports de vente (section 10) |
    | `RESEND_API_KEY` *(optionnel)* | `re_...` | Requis uniquement pour la livraison automatique de produits numériques (voir section 9) |
    | `FROM_EMAIL` *(optionnel)* | `boutique@votredomaine.com` | Adresse d'expédition des emails de livraison (voir section 9) |
 
@@ -232,7 +232,29 @@ Dans `admin/index.html`, pour chaque produit téléchargeable, collez l'URL du f
 - Le fichier hébergé sur Vercel Blob a une URL publique mais très difficile à deviner (longue chaîne aléatoire) — le lien envoyé par email est une couche de protection supplémentaire (expiration + nombre d'utilisations limité), mais ce n'est pas un système d'authentification à part entière. Suffisant pour la grande majorité des petites boutiques, mais à garder en tête si vous vendez des fichiers de très haute valeur.
 - Un seul email est envoyé par commande, listant tous les produits téléchargeables achetés dans cette commande.
 
+## 10. Rapports de vente (pour le partage de dividendes)
+
+L'admin peut générer des rapports de vente directement depuis Stripe, sur une période choisie, avec quatre vues : total, par catégorie, par article (avec SKU), et par site. Utile pour calculer des dividendes/parts revenant à des produits ou sites spécifiques.
+
+**Aucune configuration supplémentaire** : ça réutilise le même jeton (`ADMIN_STOCK_TOKEN`) et la même URL d'API que le panneau « Stock en ligne » (section 8). Si vous ne suivez pas le stock, définissez quand même `ADMIN_STOCK_TOKEN` sur Vercel pour activer cette fonctionnalité.
+
+### Utilisation
+
+1. Dans `admin/index.html`, panneau **« Rapports de vente »** : renseignez l'URL de l'API et le jeton admin (comme pour le panneau Stock, mémorisés dans votre navigateur).
+2. Choisissez une date de début et de fin.
+3. **Générer le rapport** — affiche le nombre de commandes, le revenu total (hors taxes — base pertinente pour un partage), et le montant encaissé (taxes incluses).
+4. **Exporter le détail (CSV)** pour obtenir la liste ligne par ligne (date, site, SKU, produit, catégorie, quantité, revenu, encaissé, ID de commande Stripe) — utile pour vos calculs de comptabilité.
+
+### Comment le rapport « par site » fonctionne
+
+Le site d'origine d'une vente est enregistré automatiquement si le bloc d'intégration du widget porte l'attribut `data-site-id` (section 4). Une vente effectuée sans cet attribut apparaîtra sous « inconnu ».
+
+### Limites à connaître
+
+- Le rapport interroge Stripe en direct à chaque génération (pas de base de données de ventes séparée) — pour une période avec beaucoup de commandes (plus de 500), le rapport est tronqué ; réduisez la plage de dates dans ce cas.
+- Un produit supprimé du catalogue après une vente apparaît comme « Produit supprimé du catalogue » dans le rapport (l'historique Stripe reste intact, mais on ne peut plus retrouver son SKU/catégorie).
+
 ## Aller plus loin (suggestions restantes)
 
-- **Suivi des commandes** : pour l'instant, tout le suivi se fait depuis le Dashboard Stripe. Un webhook Stripe supplémentaire permettrait d'automatiser d'autres actions après paiement (email personnalisé, mise à jour d'un tableau de commandes, etc.) si besoin plus tard.
+- **Suivi des commandes détaillé** : les rapports de vente (section 10) couvrent l'essentiel pour les dividendes. Pour un vrai tableau de bord de commandes (statuts, adresses de livraison, etc.), le Dashboard Stripe reste la référence complète.
 
