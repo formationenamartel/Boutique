@@ -36,10 +36,9 @@ export default async function handler(req, res) {
     res.status(400).json({ error: 'Le suivi de stock (Vercel KV) n\'est pas configure.' });
     return;
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    res.status(400).json({ error: 'Vercel Blob n\'est pas configure (necessaire pour stocker la sauvegarde).' });
-    return;
-  }
+  // Pas de verification stricte de BLOB_READ_WRITE_TOKEN : ce compte utilise l'authentification
+  // OIDC de Vercel pour Blob (recommandee par Vercel), qui ne passe pas par cette variable.
+  // Si Blob n'est pas connecte au projet, l'appel put() ci-dessous echouera avec un message clair.
 
   try {
     const stock = await getAllTrackedStock();
