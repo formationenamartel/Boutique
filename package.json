@@ -8,6 +8,7 @@
   },
   "dependencies": {
     "stripe": "^16.12.0",
-    "@vercel/kv": "^3.0.0"
+    "@vercel/kv": "^3.0.0",
+    "@vercel/blob": "^0.27.1"
   }
 }

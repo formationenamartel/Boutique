@@ -45,6 +45,7 @@ Une fois hébergé, notez l'URL publique de votre `products.json`, par exemple :
    | `ADMIN_STOCK_TOKEN` *(optionnel)* | une chaîne aléatoire longue | Requis pour le suivi de stock (section 8) et/ou les rapports de vente (section 10) |
    | `RESEND_API_KEY` *(optionnel)* | `re_...` | Requis uniquement pour la livraison automatique de produits numériques (voir section 9) |
    | `FROM_EMAIL` *(optionnel)* | `boutique@votredomaine.com` | Adresse d'expédition des emails de livraison (voir section 9) |
+   | `CRON_SECRET` *(optionnel)* | une chaîne aléatoire longue | Requis pour la sauvegarde automatique quotidienne du stock (voir section 8) |
 
 4. Déployez. Vous obtenez une URL du type `https://votre-projet.vercel.app/api/create-checkout-session` — c'est l'URL `data-api-url` à utiliser dans le widget.
 
@@ -207,6 +208,18 @@ Fonctionnement : quand un client clique sur « Passer la commande », la quantit
 
 - Le stock est stocké dans Vercel KV, pas dans `products.json` — c'est volontaire (voir ci-dessus), mais cela veut dire que le stock affiché dans l'admin après un import ZIP reflète le dernier export, pas forcément le stock réellement disponible en ligne (utilisez « Charger le stock actuel » pour le vérifier).
 - Si la livraison du webhook échoue durablement (rare), une réservation abandonnée ne sera pas restituée automatiquement ; vous pouvez toujours corriger manuellement via le panneau de réapprovisionnement.
+
+### Sauvegarde automatique du stock
+
+Comme le stock ne vit que dans Vercel KV (pas dans `products.json`, ni dans Git), une suppression accidentelle de la base ferait perdre les quantités en cours. Une sauvegarde quotidienne automatique est en place :
+
+1. **Ajouter Vercel Blob** si ce n'est pas déjà fait (utilisé aussi pour la livraison numérique, section 9) : `Storage > Create Database > Blob`.
+2. **Définir un jeton de tâche planifiée** : ajoutez la variable d'environnement `CRON_SECRET` avec une chaîne aléatoire longue — Vercel l'utilise automatiquement pour authentifier ses propres appels planifiés (rien d'autre à configurer).
+3. Redéployez. Une sauvegarde s'exécute alors **automatiquement chaque jour à 8h UTC**, écrasant un fichier `backups/stock-backup-latest.json` sur votre Blob store avec les quantités actuelles.
+
+Vous pouvez aussi déclencher une sauvegarde immédiate à tout moment avec le bouton **« Sauvegarder le stock maintenant »** dans le panneau « Stock en ligne » de l'admin (utilise le même `ADMIN_STOCK_TOKEN`).
+
+**En cas de perte de la base KV (restauration manuelle)** : ouvrez le fichier de sauvegarde (son URL s'affiche après un clic sur le bouton, ou consultez votre Blob store) — il contient un objet `{ "productId": quantite, ... }`. Pour chaque produit, utilisez le panneau « Stock en ligne » : cliquez « Charger le stock actuel » (affichera 0 ou vide pour les produits perdus), puis entrez la quantité de la sauvegarde comme ajustement (puisque la base repart de zéro, l'ajustement = la valeur sauvegardée) et « Appliquer ».
 
 ## 9. Livraison automatique des produits numériques
 

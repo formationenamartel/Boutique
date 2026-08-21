@@ -260,7 +260,9 @@
     </div>
     <div class="row">
       <button class="btn" id="btn-load-stock">Charger le stock actuel</button>
+      <button class="btn-outline btn" id="btn-backup-stock">Sauvegarder le stock maintenant</button>
     </div>
+    <p class="hint" id="backup-stock-status"></p>
     <table style="margin-top:14px;">
       <thead><tr><th>Produit</th><th>Stock en ligne</th><th>Ajustement</th><th></th></tr></thead>
       <tbody id="live-stock-table-body"></tbody>
@@ -970,6 +972,27 @@
       toast('Stock chargé.');
     } catch (err) {
       toast('Impossible de charger le stock : ' + err.message);
+    }
+  });
+
+  document.getElementById('btn-backup-stock').addEventListener('click', async () => {
+    const config = saveApiConfig();
+    if (!config.baseUrl || !config.token) { toast('Renseignez l\'URL de l\'API et le jeton admin.'); return; }
+    const statusEl = document.getElementById('backup-stock-status');
+    statusEl.textContent = 'Sauvegarde en cours...';
+    try {
+      const response = await fetch(config.baseUrl + '/api/backup-stock', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + config.token },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erreur inconnue');
+      statusEl.innerHTML = 'Dernière sauvegarde : ' + new Date(data.generatedAt).toLocaleString('fr-FR') +
+        ' (' + data.productCount + ' produit(s)) — <a href="' + data.url + '" target="_blank" rel="noopener">voir le fichier</a>';
+      toast('Stock sauvegardé.');
+    } catch (err) {
+      statusEl.textContent = '';
+      toast('Sauvegarde impossible : ' + err.message);
     }
   });
 

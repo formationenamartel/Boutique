@@ -81,3 +81,15 @@ export async function adjustStock(productId, delta) {
   if (!exists) await kv.set(stockKey(productId), 0);
   return kv.incrby(stockKey(productId), delta);
 }
+
+// Pour la sauvegarde : liste tous les stocks actuellement suivis en KV (hors reservations, transitoires).
+export async function getAllTrackedStock() {
+  const keys = await kv.keys('stock:*');
+  if (keys.length === 0) return {};
+  const values = await Promise.all(keys.map((k) => kv.get(k)));
+  const result = {};
+  keys.forEach((k, i) => {
+    result[k.slice('stock:'.length)] = values[i];
+  });
+  return result;
+}
