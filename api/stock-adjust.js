@@ -1,4 +1,5 @@
 import { adjustStock } from './_stock.js';
+import { isRateLimited, recordFailure, clearFailures } from './_ratelimit.js';
 
 // Protege par jeton (Authorization: Bearer ...) plutot que par origine : c'est ce jeton,
 // pas le CORS, qui controle l'acces. Ouvert a toute origine pour fonctionner depuis l'admin
@@ -24,12 +25,19 @@ export default async function handler(req, res) {
     return;
   }
 
+  if (await isRateLimited(req)) {
+    res.status(429).json({ error: 'Trop de tentatives echouees. Reessayez dans 15 minutes.' });
+    return;
+  }
+
   const authHeader = req.headers.authorization || '';
   const providedToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (providedToken !== expectedToken) {
+    await recordFailure(req);
     res.status(401).json({ error: 'Jeton invalide.' });
     return;
   }
+  await clearFailures(req);
 
   if (!process.env.KV_REST_API_URL) {
     res.status(400).json({ error: 'Le suivi de stock (Vercel KV) n\'est pas configure.' });

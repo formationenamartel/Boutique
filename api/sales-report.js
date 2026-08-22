@@ -1,5 +1,6 @@
 import Stripe from 'stripe';
 import { loadCatalog } from './_shared.js';
+import { isRateLimited, recordFailure, clearFailures } from './_ratelimit.js';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const MAX_SESSIONS = 500; // garde-fou pour eviter un depassement du temps d'execution de la fonction
@@ -25,12 +26,20 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'ADMIN_STOCK_TOKEN n\'est pas configure sur le serveur.' });
     return;
   }
+
+  if (await isRateLimited(req)) {
+    res.status(429).json({ error: 'Trop de tentatives echouees. Reessayez dans 15 minutes.' });
+    return;
+  }
+
   const authHeader = req.headers.authorization || '';
   const providedToken = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
   if (providedToken !== expectedToken) {
+    await recordFailure(req);
     res.status(401).json({ error: 'Jeton invalide.' });
     return;
   }
+  await clearFailures(req);
 
   try {
     const startParam = parseInt(req.query.start, 10);

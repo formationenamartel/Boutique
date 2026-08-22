@@ -208,6 +208,7 @@ Fonctionnement : quand un client clique sur « Passer la commande », la quantit
 
 - Le stock est stocké dans Vercel KV, pas dans `products.json` — c'est volontaire (voir ci-dessus), mais cela veut dire que le stock affiché dans l'admin après un import ZIP reflète le dernier export, pas forcément le stock réellement disponible en ligne (utilisez « Charger le stock actuel » pour le vérifier).
 - Si la livraison du webhook échoue durablement (rare), une réservation abandonnée ne sera pas restituée automatiquement ; vous pouvez toujours corriger manuellement via le panneau de réapprovisionnement.
+- Les endpoints protégés par `ADMIN_STOCK_TOKEN` (réapprovisionnement, rapports de vente, sauvegarde) limitent les tentatives : après 10 essais avec un mauvais jeton depuis la même adresse IP en 15 minutes, les requêtes suivantes sont refusées (`429`) jusqu'à expiration de la fenêtre. Aucune configuration requise, actif dès que Vercel KV est connecté.
 
 ### Sauvegarde automatique du stock
 
