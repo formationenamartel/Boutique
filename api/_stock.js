@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { kv } from './_kv.js';
 
 const RESERVATION_TTL_SECONDS = 2 * 60 * 60; // 2h : marge large par rapport a l'expiration de la session Stripe (30 min)
 

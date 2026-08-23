@@ -1,4 +1,4 @@
-import { kv } from '@vercel/kv';
+import { kv } from './_kv.js';
 
 const WINDOW_SECONDS = 15 * 60; // fenetre glissante de 15 minutes
 const MAX_ATTEMPTS = 10; // au-dela, l'IP est bloquee jusqu'a expiration de la fenetre

@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { kv } from '@vercel/kv';
+import { kv } from './_kv.js';
 
 const TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 jours
 const MAX_DOWNLOADS = 3;
