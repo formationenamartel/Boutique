@@ -104,6 +104,17 @@
   text-align: center;
 }
 
+.boutique-thankyou-banner {
+  background: #e6f7ee;
+  color: #1a7a4a;
+  border: 1px solid #b8e6cc;
+  border-radius: var(--boutique-radius);
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .boutique-cart-fab {
   position: fixed;
   right: 24px;

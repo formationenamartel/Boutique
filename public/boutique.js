@@ -40,6 +40,21 @@
     fab.addEventListener('click', openCart);
     document.body.appendChild(fab);
 
+    // Retour depuis Stripe apres un paiement reussi (successUrl) : le panier de CE navigateur
+    // vient d'etre paye, on le vide pour ne pas le faire payer une deuxieme fois par erreur.
+    if (new URLSearchParams(window.location.search).get('paiement') === 'succes' && cart.length > 0) {
+      cart = [];
+      saveCart();
+      showThankYouBanner();
+    }
+
+    function showThankYouBanner() {
+      const banner = document.createElement('div');
+      banner.className = 'boutique-thankyou-banner';
+      banner.textContent = 'Merci pour votre achat ! Une confirmation vous a été envoyée par courriel.';
+      root.prepend(banner);
+    }
+
     function loadCart() {
       try {
         return JSON.parse(localStorage.getItem(cartKey)) || [];
