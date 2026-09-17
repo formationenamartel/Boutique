@@ -5,6 +5,7 @@ Ce projet vous donne trois choses :
 1. **`public/`** — le widget boutique (HTML/CSS/JS) que vous intégrez dans vos sites : grille produits, filtres par catégorie, panier, paiement.
 2. **`admin/index.html`** — une page d'administration à ouvrir dans votre navigateur pour gérer produits, catégories et images, sans rien installer.
 3. **`api/`** — de petites fonctions serveur (déployées gratuitement sur [Vercel](https://vercel.com)) : `create-checkout-session.js` crée la session de paiement Stripe de façon sécurisée, et `stock.js` / `stock-adjust.js` / `webhook.js` gèrent le suivi de stock optionnel (section 8). C'est la seule pièce "backend", et elle est **partagée par tous vos sites**.
+4. **`etiquettes/index.html`** — un outil local (aucune installation) pour créer et imprimer des étiquettes d'expédition 4"x6" sur une imprimante thermique (ex. NefLacca NL-N41), avec mise en page façon étiquette de transporteur et code-barres. Voir section 11.
 
 Pourquoi une fonction serveur est nécessaire : pour un panier avec plusieurs produits payés en une seule fois, Stripe doit connaître les prix exacts. Il ne faut **jamais** faire confiance aux prix envoyés par le navigateur (n'importe qui pourrait les modifier avant l'envoi) — la fonction relit donc les vrais prix dans votre `products.json` avant de créer le paiement.
 
@@ -268,6 +269,25 @@ Le site d'origine d'une vente est enregistré automatiquement si le bloc d'inté
 - Le rapport interroge Stripe en direct à chaque génération (pas de base de données de ventes séparée) — pour une période avec beaucoup de commandes (plus de 500), le rapport est tronqué ; réduisez la plage de dates dans ce cas.
 - La fonction est limitée à 10 secondes d'exécution (plan Vercel Hobby). Pour une période avec beaucoup de commandes, ça peut ne pas suffire et renvoyer une erreur — dans ce cas, réduisez la plage de dates (ex. un mois à la fois plutôt qu'une année) et cumulez plusieurs rapports.
 - Un produit supprimé du catalogue après une vente apparaît comme « Produit supprimé du catalogue » dans le rapport (l'historique Stripe reste intact, mais on ne peut plus retrouver son SKU/catégorie).
+
+## 11. Étiquettes d'expédition
+
+`etiquettes/index.html` est un outil **local et autonome** (aucun lien avec Stripe ou Vercel pour l'instant) pour créer et imprimer des étiquettes 4"x6" sur une imprimante thermique (ex. NefLacca NL-N41, compatible Dymo).
+
+**Important** : la mise en page reprend le **style** classique d'une étiquette de transporteur (bloc De/À, case service/poids, code-barres) mais n'utilise ni le logo ni les couleurs de marque d'UPS ou d'un autre transporteur — ce n'est pas une vraie étiquette UPS, il n'y a pas de numéro de suivi authentique ni de tarif calculé par un transporteur. Le champ « Transporteur » est un texte libre que vous remplissez vous-même.
+
+### Utilisation
+
+1. Ouvrez `etiquettes/index.html` dans votre navigateur (double-clic, aucune installation).
+2. Remplissez l'expéditeur (enregistrez-le comme **profil** pour le réutiliser — utile avec vos différentes entreprises) et le destinataire.
+3. Ajustez transporteur, service, poids, nombre de colis et référence (ex. numéro de commande) — la référence est encodée dans le code-barres.
+4. **Imprimer l'étiquette** : dans la boîte de dialogue d'impression, sélectionnez votre imprimante NefLacca, réglez le format de papier sur **4 x 6 po**, et désactivez toute mise à l'échelle automatique.
+
+Vos profils expéditeur et le dernier destinataire saisi sont sauvegardés dans votre navigateur (pas besoin de tout retaper à chaque fois).
+
+### Prochaine étape prévue
+
+Pour l'instant, les informations du destinataire se saisissent manuellement. L'intégration avec les commandes de la boutique (pré-remplir automatiquement l'adresse collectée par Stripe) est prévue pour plus tard — dites-le-moi quand vous voudrez qu'on s'y attaque.
 
 ## Aller plus loin (suggestions restantes)
 

@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Étiquettes d'expédition</title>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+<style>
+  :root {
+    --accent: #1a1a2e;
+    --border: #000;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f2f2f5;
+    color: #1a1a2e;
+    margin: 0;
+    padding: 24px;
+  }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  p.lead { color: #6b7280; margin: 0 0 20px; font-size: 14px; }
+  .layout {
+    display: flex;
+    gap: 24px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+  .panel {
+    background: #fff;
+    border: 1px solid #e0e0e6;
+    border-radius: 10px;
+    padding: 18px 20px;
+    flex: 1;
+    min-width: 340px;
+  }
+  .panel h2 { font-size: 15px; margin: 0 0 12px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .field { margin-bottom: 10px; flex: 1; min-width: 130px; }
+  label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 3px; }
+  input, select {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid #d8d8de;
+    border-radius: 6px;
+    font-size: 13px;
+    font-family: inherit;
+  }
+  .btn {
+    border: none;
+    background: #635bff;
+    color: #fff;
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-outline { background: #fff; color: #1a1a2e; border: 1px solid #d8d8de; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+  .actions { display: flex; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+  hr { border: none; border-top: 1px solid #eee; margin: 14px 0; }
+
+  /* ---- Etiquette 4x6 ---- */
+  .label-wrap { flex: 0 0 auto; }
+  .label {
+    width: 4in;
+    height: 6in;
+    border: 2px solid var(--border);
+    padding: 0.15in;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #000;
+  }
+  .label .carrier-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 2px solid #000;
+    padding-bottom: 6px;
+    margin-bottom: 8px;
+  }
+  .label .carrier-name { font-size: 20px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; }
+  .label .service-name { font-size: 14px; font-weight: 700; text-transform: uppercase; }
+  .label .block { border: 1px solid #000; padding: 6px 8px; margin-bottom: 8px; }
+  .label .block-title { font-size: 9px; font-weight: 700; color: #444; margin-bottom: 2px; text-transform: uppercase; }
+  .label .from-block { font-size: 11px; line-height: 1.3; }
+  .label .to-block { font-size: 16px; font-weight: 700; line-height: 1.35; }
+  .label .to-block .to-name { font-size: 19px; }
+  .label .meta-row { display: flex; gap: 6px; margin-bottom: 8px; }
+  .label .meta-box { flex: 1; border: 1px solid #000; padding: 5px 6px; text-align: center; }
+  .label .meta-box .meta-label { font-size: 8px; font-weight: 700; color: #444; text-transform: uppercase; }
+  .label .meta-box .meta-value { font-size: 14px; font-weight: 800; }
+  .label .barcode-area { margin-top: auto; text-align: center; border-top: 2px solid #000; padding-top: 8px; }
+  .label .barcode-area svg { max-width: 100%; }
+  .label .ref-line { font-size: 11px; text-align: center; margin-top: 4px; font-weight: 600; }
+
+  .no-print-hint { font-size: 12px; color: #6b7280; margin-top: 10px; }
+
+  @media print {
+    body { background: #fff; padding: 0; margin: 0; }
+    h1, p.lead, .panel, .no-print-hint { display: none !important; }
+    .layout { display: block; }
+    .label-wrap { display: block; }
+    .label {
+      border: none;
+      width: 4in;
+      height: 6in;
+      margin: 0;
+      padding: 0.15in;
+    }
+    @page { size: 4in 6in; margin: 0; }
+  }
+</style>
+</head>
+<body>
+  <h1>Étiquettes d'expédition</h1>
+  <p class="lead">Remplissez les champs, puis imprimez sur votre imprimante 4"x6" (sélectionnez le format de papier 4x6 dans la boîte de dialogue d'impression).</p>
+
+  <div class="layout">
+    <div class="panel">
+      <h2>Expéditeur</h2>
+      <div class="row">
+        <div class="field" style="max-width:220px;">
+          <label>Profil enregistré</label>
+          <select id="sender-profile"></select>
+        </div>
+        <div class="field" style="max-width:140px; align-self:flex-end;">
+          <button class="btn-outline btn btn-sm" id="btn-delete-profile">Supprimer ce profil</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Nom / Entreprise</label>
+        <input type="text" id="from-name">
+      </div>
+      <div class="row">
+        <div class="field"><label>Adresse</label><input type="text" id="from-addr1"></div>
+        <div class="field"><label>App./Suite (optionnel)</label><input type="text" id="from-addr2"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Ville</label><input type="text" id="from-city"></div>
+        <div class="field" style="max-width:100px;"><label>Prov.</label><input type="text" id="from-prov" value="QC"></div>
+        <div class="field" style="max-width:130px;"><label>Code postal</label><input type="text" id="from-postal"></div>
+      </div>
+      <div class="field"><label>Téléphone (optionnel)</label><input type="text" id="from-phone"></div>
+      <div class="actions">
+        <button class="btn" id="btn-save-profile">Enregistrer comme profil</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Destinataire</h2>
+      <div class="field"><label>Nom</label><input type="text" id="to-name"></div>
+      <div class="row">
+        <div class="field"><label>Adresse</label><input type="text" id="to-addr1"></div>
+        <div class="field"><label>App./Suite (optionnel)</label><input type="text" id="to-addr2"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Ville</label><input type="text" id="to-city"></div>
+        <div class="field" style="max-width:100px;"><label>Prov./État</label><input type="text" id="to-prov" value="QC"></div>
+        <div class="field" style="max-width:130px;"><label>Code postal</label><input type="text" id="to-postal"></div>
+      </div>
+      <div class="field"><label>Pays</label><input type="text" id="to-country" value="CANADA"></div>
+      <div class="field"><label>Téléphone (optionnel)</label><input type="text" id="to-phone"></div>
+
+      <hr>
+      <h2>Colis</h2>
+      <div class="row">
+        <div class="field"><label>Transporteur (texte libre)</label><input type="text" id="carrier-name" value="EXPÉDITION"></div>
+        <div class="field"><label>Service</label><input type="text" id="service-name" value="STANDARD"></div>
+      </div>
+      <div class="row">
+        <div class="field" style="max-width:110px;"><label>Poids</label><input type="text" id="weight" value="1 lb"></div>
+        <div class="field" style="max-width:110px;"><label>Colis</label><input type="text" id="package-count" value="1 / 1"></div>
+        <div class="field"><label>Référence / commande #</label><input type="text" id="reference"></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="btn-print">Imprimer l'étiquette</button>
+        <button class="btn-outline btn" id="btn-clear-recipient">Vider le destinataire</button>
+      </div>
+      <p class="no-print-hint">Astuce : dans la boîte de dialogue d'impression, choisissez votre imprimante NefLacca, réglez le format de papier sur 4 x 6 po, et désactivez les marges/mise à l'échelle automatique pour un rendu exact.</p>
+    </div>
+
+    <div class="label-wrap">
+      <div class="label" id="label">
+        <div class="carrier-row">
+          <span class="carrier-name" id="lbl-carrier">EXPÉDITION</span>
+          <span class="service-name" id="lbl-service">STANDARD</span>
+        </div>
+        <div class="block from-block">
+          <div class="block-title">De</div>
+          <div id="lbl-from"></div>
+        </div>
+        <div class="block to-block">
+          <div class="block-title">À</div>
+          <div id="lbl-to"></div>
+        </div>
+        <div class="meta-row">
+          <div class="meta-box"><div class="meta-label">Poids</div><div class="meta-value" id="lbl-weight">—</div></div>
+          <div class="meta-box"><div class="meta-label">Colis</div><div class="meta-value" id="lbl-count">—</div></div>
+        </div>
+        <div class="barcode-area">
+          <svg id="barcode"></svg>
+          <div class="ref-line" id="lbl-ref"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  const PROFILES_KEY = 'etiquettes_sender_profiles_v1';
+  const LAST_STATE_KEY = 'etiquettes_last_state_v1';
+
+  const senderFields = ['from-name', 'from-addr1', 'from-addr2', 'from-city', 'from-prov', 'from-postal', 'from-phone'];
+  const allFields = senderFields.concat([
+    'to-name', 'to-addr1', 'to-addr2', 'to-city', 'to-prov', 'to-postal', 'to-country', 'to-phone',
+    'carrier-name', 'service-name', 'weight', 'package-count', 'reference',
+  ]);
+
+  function val(id) { return document.getElementById(id).value.trim(); }
+  function set(id, v) { document.getElementById(id).value = v || ''; }
+
+  function loadProfiles() {
+    try { return JSON.parse(localStorage.getItem(PROFILES_KEY)) || {}; } catch { return {}; }
+  }
+  function saveProfiles(profiles) {
+    localStorage.setItem(PROFILES_KEY, JSON.stringify(profiles));
+  }
+
+  function renderProfileSelect(selectedName) {
+    const profiles = loadProfiles();
+    const select = document.getElementById('sender-profile');
+    const names = Object.keys(profiles);
+    select.innerHTML = '<option value="">— Nouveau profil —</option>' +
+      names.map((n) => '<option value="' + n + '">' + n + '</option>').join('');
+    if (selectedName && names.includes(selectedName)) select.value = selectedName;
+  }
+
+  document.getElementById('sender-profile').addEventListener('change', (e) => {
+    const profiles = loadProfiles();
+    const p = profiles[e.target.value];
+    if (!p) { senderFields.forEach((f) => set(f, '')); set('from-prov', 'QC'); updateLabel(); return; }
+    senderFields.forEach((f) => set(f, p[f] || ''));
+    updateLabel();
+  });
+
+  document.getElementById('btn-save-profile').addEventListener('click', () => {
+    const name = val('from-name');
+    if (!name) { alert('Entrez un nom/entreprise avant d\'enregistrer le profil.'); return; }
+    const profiles = loadProfiles();
+    const data = {};
+    senderFields.forEach((f) => { data[f] = val(f); });
+    profiles[name] = data;
+    saveProfiles(profiles);
+    renderProfileSelect(name);
+  });
+
+  document.getElementById('btn-delete-profile').addEventListener('click', () => {
+    const select = document.getElementById('sender-profile');
+    const name = select.value;
+    if (!name) return;
+    if (!confirm('Supprimer le profil "' + name + '" ?')) return;
+    const profiles = loadProfiles();
+    delete profiles[name];
+    saveProfiles(profiles);
+    renderProfileSelect();
+  });
+
+  document.getElementById('btn-clear-recipient').addEventListener('click', () => {
+    ['to-name', 'to-addr1', 'to-addr2', 'to-city', 'to-postal', 'to-phone', 'reference'].forEach((f) => set(f, ''));
+    set('to-prov', 'QC');
+    set('to-country', 'CANADA');
+    updateLabel();
+  });
+
+  document.getElementById('btn-print').addEventListener('click', () => window.print());
+
+  function updateLabel() {
+    document.getElementById('lbl-carrier').textContent = val('carrier-name') || 'EXPÉDITION';
+    document.getElementById('lbl-service').textContent = val('service-name') || '';
+
+    const fromLines = [val('from-name'), val('from-addr1'), val('from-addr2')].filter(Boolean);
+    const fromCity = [val('from-city'), val('from-prov'), val('from-postal')].filter(Boolean).join(' ');
+    if (fromCity) fromLines.push(fromCity);
+    document.getElementById('lbl-from').innerHTML = fromLines.map(escapeHtml).join('<br>');
+
+    const toLines = [];
+    if (val('to-name')) toLines.push('<span class="to-name">' + escapeHtml(val('to-name')) + '</span>');
+    if (val('to-addr1')) toLines.push(escapeHtml(val('to-addr1')));
+    if (val('to-addr2')) toLines.push(escapeHtml(val('to-addr2')));
+    const toCity = [val('to-city'), val('to-prov'), val('to-postal')].filter(Boolean).join(' ');
+    if (toCity) toLines.push(escapeHtml(toCity));
+    if (val('to-country')) toLines.push(escapeHtml(val('to-country')));
+    document.getElementById('lbl-to').innerHTML = toLines.join('<br>');
+
+    document.getElementById('lbl-weight').textContent = val('weight') || '—';
+    document.getElementById('lbl-count').textContent = val('package-count') || '—';
+
+    const ref = val('reference');
+    document.getElementById('lbl-ref').textContent = ref ? ('Réf : ' + ref) : '';
+    try {
+      window.JsBarcode('#barcode', ref || '0000000000', {
+        format: 'CODE128',
+        displayValue: false,
+        height: 45,
+        margin: 0,
+      });
+    } catch (e) {
+      // ignore si le champ est vide/invalide pour ce format
+    }
+
+    saveState();
+  }
+
+  function saveState() {
+    const state = {};
+    allFields.forEach((f) => { state[f] = val(f); });
+    localStorage.setItem(LAST_STATE_KEY, JSON.stringify(state));
+  }
+
+  function restoreState() {
+    try {
+      const state = JSON.parse(localStorage.getItem(LAST_STATE_KEY));
+      if (state) allFields.forEach((f) => set(f, state[f]));
+    } catch {}
+  }
+
+  allFields.forEach((f) => document.getElementById(f).addEventListener('input', updateLabel));
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  restoreState();
+  renderProfileSelect();
+  updateLabel();
+})();
+</script>
+</body>
+</html>
