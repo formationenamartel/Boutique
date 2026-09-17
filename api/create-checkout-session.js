@@ -51,6 +51,7 @@ export default async function handler(req, res) {
 
     const normalizedItems = [];
     const line_items = [];
+    let hasPhysicalItems = false;
     for (const rawItem of items) {
       const product = productsById.get(rawItem && rawItem.id);
       if (!product || product.active === false) {
@@ -59,6 +60,7 @@ export default async function handler(req, res) {
       }
       const quantity = Math.min(Math.max(parseInt(rawItem.quantity, 10) || 1, 1), 99);
       normalizedItems.push({ id: product.id, quantity });
+      if (typeof product.weight === 'number' && product.weight > 0) hasPhysicalItems = true;
 
       line_items.push({
         quantity,
@@ -112,8 +114,14 @@ export default async function handler(req, res) {
       allow_promotion_codes: true,
       metadata: sanitizedSiteId ? { siteId: sanitizedSiteId } : undefined,
       expires_at: reservedItems.length > 0 ? Math.floor(Date.now() / 1000) + RESERVATION_WINDOW_SECONDS : undefined,
-      shipping_address_collection: process.env.SHIP_TO_COUNTRIES
-        ? { allowed_countries: process.env.SHIP_TO_COUNTRIES.split(',').map((c) => c.trim()) }
+      // Adresse de livraison demandee automatiquement si le panier contient un article avec
+      // un poids (donc a expedier) - inutile de demander une adresse pour un panier 100% numerique.
+      shipping_address_collection: hasPhysicalItems
+        ? {
+            allowed_countries: process.env.SHIP_TO_COUNTRIES
+              ? process.env.SHIP_TO_COUNTRIES.split(',').map((c) => c.trim())
+              : ['CA', 'US'],
+          }
         : undefined,
       automatic_tax: automaticTaxEnabled ? { enabled: true } : undefined,
       billing_address_collection: automaticTaxEnabled ? 'required' : undefined,

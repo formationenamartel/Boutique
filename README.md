@@ -40,7 +40,7 @@ Une fois hébergé, notez l'URL publique de votre `products.json`, par exemple :
    | `ALLOWED_ORIGINS` | `https://monsite.com,https://autresite.com` | Domaines de vos sites autorisés à appeler l'API (séparés par des virgules) |
    | `DEFAULT_SUCCESS_URL` | `https://monsite.com/merci` | Page affichée après un paiement réussi (si le site appelant n'en fournit pas une valide) |
    | `DEFAULT_CANCEL_URL` | `https://monsite.com/boutique` | Page affichée si le client annule |
-   | `SHIP_TO_COUNTRIES` *(optionnel)* | `CA,US` | Si vous vendez des produits physiques, pays de livraison acceptés par Stripe |
+   | `SHIP_TO_COUNTRIES` *(optionnel)* | `CA,US` | Pays de livraison acceptés. Sans cette variable, `CA,US` est utilisé par défaut dès qu'un produit avec un poids (section 11) est dans le panier. |
    | `ENABLE_AUTOMATIC_TAX` *(optionnel)* | `true` | Active le calcul automatique de la TVA/taxes via Stripe Tax (voir section 7) |
    | `STRIPE_WEBHOOK_SECRET` *(optionnel)* | `whsec_...` | Requis pour le suivi de stock (section 8) et/ou la livraison numérique (section 9) |
    | `ADMIN_STOCK_TOKEN` *(optionnel)* | une chaîne aléatoire longue | Requis pour le suivi de stock (section 8) et/ou les rapports de vente (section 10) |
@@ -288,6 +288,8 @@ Vos profils expéditeur et le dernier destinataire saisi sont sauvegardés dans 
 ### Poids par produit (pour le calcul automatique)
 
 Dans `admin/index.html`, chaque produit a un champ **« Poids (lb, si à expédier) »**. Un produit **sans poids renseigné** est considéré comme non expédié (téléchargement, service) — c'est ce champ qui fait la différence entre un produit à expédier et un produit téléchargeable, pas un champ séparé. Pour une commande avec plusieurs articles, les poids (poids unitaire × quantité) s'additionnent automatiquement.
+
+Dès qu'un produit avec un poids se trouve dans le panier, Stripe **demande automatiquement l'adresse de livraison** au client pendant le paiement (aucune configuration requise) — c'est cette adresse que l'outil d'étiquettes récupère ensuite. Un panier 100 % numérique ne demande jamais d'adresse.
 
 ### Charger une commande depuis la boutique
 
