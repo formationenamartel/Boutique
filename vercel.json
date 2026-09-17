@@ -7,7 +7,8 @@
     "api/download.js": { "maxDuration": 10 },
     "api/sales-report.js": { "maxDuration": 10 },
     "api/backup-stock.js": { "maxDuration": 10 },
-    "api/order-shipping.js": { "maxDuration": 10 }
+    "api/order-shipping.js": { "maxDuration": 10 },
+    "api/recent-orders.js": { "maxDuration": 10 }
   },
   "crons": [
     { "path": "/api/backup-stock", "schedule": "0 8 * * *" }

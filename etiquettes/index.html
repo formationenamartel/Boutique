@@ -165,6 +165,10 @@
             <button class="btn-outline btn btn-sm" id="btn-load-order">Charger la commande</button>
           </div>
         </div>
+        <div class="actions" style="margin-top:2px;">
+          <button class="btn-outline btn btn-sm" id="btn-list-recent-orders">Voir les commandes récentes</button>
+        </div>
+        <div id="recent-orders-list" style="margin-top:8px; max-height:180px; overflow-y:auto; display:none;"></div>
         <p class="no-print-hint" id="order-load-status" style="margin:6px 0 0;"></p>
       </div>
 
@@ -317,9 +321,8 @@
     return cfg;
   }
 
-  document.getElementById('btn-load-order').addEventListener('click', async () => {
+  async function loadOrder(sessionId) {
     const cfg = saveOrderApiConfig();
-    const sessionId = val('order-session-id');
     const statusEl = document.getElementById('order-load-status');
     if (!cfg.baseUrl || !cfg.token) { statusEl.textContent = 'Renseignez l\'URL de l\'API et le jeton admin.'; return; }
     if (!sessionId) { statusEl.textContent = 'Collez l\'ID de session Stripe (cs_...).'; return; }
@@ -332,6 +335,7 @@
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Erreur inconnue');
 
+      set('order-session-id', sessionId);
       set('to-name', data.recipientName || '');
       set('to-phone', data.phone || '');
       if (data.address) {
@@ -352,6 +356,48 @@
         : 'Commande chargée — attention, aucun article de cette commande n\'a de poids renseigné (produit numérique/service ?).';
     } catch (err) {
       statusEl.textContent = 'Impossible de charger la commande : ' + err.message;
+    }
+  }
+
+  document.getElementById('btn-load-order').addEventListener('click', () => loadOrder(val('order-session-id')));
+
+  document.getElementById('btn-list-recent-orders').addEventListener('click', async () => {
+    const cfg = saveOrderApiConfig();
+    const statusEl = document.getElementById('order-load-status');
+    const listEl = document.getElementById('recent-orders-list');
+    if (!cfg.baseUrl || !cfg.token) { statusEl.textContent = 'Renseignez l\'URL de l\'API et le jeton admin.'; return; }
+
+    statusEl.textContent = 'Chargement des commandes récentes...';
+    try {
+      const response = await fetch(cfg.baseUrl + '/api/recent-orders', {
+        headers: { Authorization: 'Bearer ' + cfg.token },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erreur inconnue');
+
+      if (data.orders.length === 0) {
+        listEl.innerHTML = '<p class="no-print-hint">Aucune commande payée trouvée.</p>';
+      } else {
+        listEl.innerHTML = data.orders
+          .map((o) => {
+            const amount = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: o.currency.toUpperCase() }).format(o.amountTotal / 100);
+            const date = new Date(o.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+            const badge = o.hasShipping ? '📦' : '💾';
+            return '<div class="recent-order-row" data-session-id="' + o.sessionId + '" style="padding:6px 4px; border-bottom:1px solid #eee; cursor:pointer; font-size:12px;">' +
+              badge + ' <strong>' + escapeHtml(o.recipientName || 'Client') + '</strong> — ' + amount + ' — ' + date +
+              '</div>';
+          })
+          .join('');
+        listEl.querySelectorAll('.recent-order-row').forEach((row) => {
+          row.addEventListener('click', () => loadOrder(row.dataset.sessionId));
+          row.addEventListener('mouseenter', () => { row.style.background = '#f2f2f7'; });
+          row.addEventListener('mouseleave', () => { row.style.background = ''; });
+        });
+      }
+      listEl.style.display = 'block';
+      statusEl.textContent = data.orders.length + ' commande(s) trouvée(s) — cliquez-en une pour la charger.';
+    } catch (err) {
+      statusEl.textContent = 'Impossible de charger les commandes récentes : ' + err.message;
     }
   });
 

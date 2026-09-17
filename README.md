@@ -296,8 +296,10 @@ Dès qu'un produit avec un poids se trouve dans le panier, Stripe **demande auto
 En haut du panneau « Destinataire », la section **« Charger depuis une commande Stripe »** permet de pré-remplir l'adresse et le poids total à partir d'une vraie commande :
 
 1. Renseignez l'**URL de l'API** et le **jeton admin** (les mêmes que dans `admin/index.html`, mémorisés dans votre navigateur).
-2. Trouvez l'**ID de session Stripe** de la commande (`cs_...`) — visible dans le Dashboard Stripe, ou dans la colonne « ID de commande » de l'export CSV des rapports de vente (section 10).
-3. Collez-le et cliquez **« Charger la commande »** : le nom, l'adresse, le téléphone et le poids total se remplissent automatiquement (la référence de l'étiquette devient l'ID de session, pour la traçabilité).
+2. Cliquez **« Voir les commandes récentes »** pour afficher les 15 dernières commandes payées (nom, montant, date, avec 📦 si un produit à expédier est inclus, 💾 sinon) — cliquez-en une pour tout charger automatiquement, sans avoir besoin de retrouver un ID manuellement.
+3. Ou, si vous préférez, trouvez l'**ID de session Stripe** de la commande (`cs_...`) vous-même — visible dans le Dashboard Stripe, ou dans la colonne « ID de commande » de l'export CSV des rapports de vente (section 10) — collez-le et cliquez **« Charger la commande »**.
+
+Dans les deux cas : le nom, l'adresse, le téléphone et le poids total se remplissent automatiquement (la référence de l'étiquette devient les 12 derniers caractères de l'ID de session, pour la traçabilité, sans écraser le code-barres).
 
 Si la commande ne contient que des produits sans poids (numériques/services), un avertissement s'affiche — vous pouvez tout de même continuer manuellement si besoin.
 
