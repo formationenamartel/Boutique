@@ -16,7 +16,8 @@
       "category": "livres",
       "image": "images/produit-b.svg",
       "active": true,
-      "qstExempt": true
+      "qstExempt": true,
+      "weight": 1.5
     },
     {
       "id": "prod-digital-001",
