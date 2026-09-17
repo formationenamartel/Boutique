@@ -95,7 +95,7 @@
   .label .meta-box .meta-value { font-size: 14px; font-weight: 800; }
   .label .barcode-area { margin-top: auto; text-align: center; border-top: 2px solid #000; padding-top: 8px; }
   .label .barcode-area svg { max-width: 100%; }
-  .label .ref-line { font-size: 11px; text-align: center; margin-top: 4px; font-weight: 600; }
+  .label .ref-line { font-size: 11px; text-align: center; margin-top: 4px; font-weight: 600; word-break: break-all; padding: 0 4px; }
 
   .no-print-hint { font-size: 12px; color: #6b7280; margin-top: 10px; }
 
@@ -342,7 +342,7 @@
         set('to-postal', data.address.postalCode || '');
         set('to-country', (data.address.country || 'CA').toUpperCase());
       }
-      set('reference', data.sessionId);
+      set('reference', data.sessionId.slice(-12));
       if (data.totalWeight > 0) set('weight', data.totalWeight + ' lb');
 
       allFields.forEach((f) => document.getElementById(f).dispatchEvent(new Event('input')));
@@ -379,11 +379,14 @@
     const ref = val('reference');
     document.getElementById('lbl-ref').textContent = ref ? ('Réf : ' + ref) : '';
     try {
+      // Largeur de barre reduite pour une reference longue, pour que le code-barres
+      // reste lisible/entier sur la largeur de l'etiquette plutot que d'etre ecrase.
       window.JsBarcode('#barcode', ref || '0000000000', {
         format: 'CODE128',
         displayValue: false,
         height: 45,
         margin: 0,
+        width: ref.length > 20 ? 1 : ref.length > 12 ? 1.5 : 2,
       });
     } catch (e) {
       // ignore si le champ est vide/invalide pour ce format
