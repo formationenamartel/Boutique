@@ -152,6 +152,11 @@
         <input type="number" step="1" min="0" id="p-stock" placeholder="Illimité">
         <p class="hint">Laissez vide pour un produit sans quantité à gérer (ex : téléchargement, service).</p>
       </div>
+      <div class="field" style="max-width:180px;">
+        <label>Poids (lb, si à expédier)</label>
+        <input type="number" step="0.01" min="0" id="p-weight" placeholder="Aucun (non expédié)">
+        <p class="hint">Laissez vide pour un produit non expédié (téléchargement, service). Les poids s'additionnent automatiquement pour une commande à plusieurs articles.</p>
+      </div>
     </div>
     <div class="row">
       <div class="field" style="max-width:220px;">
@@ -238,7 +243,7 @@
   <div class="panel">
     <h2>Produits (<span id="product-count">0</span>)</h2>
     <table>
-      <thead><tr><th></th><th>Nom</th><th>SKU</th><th>Catégorie</th><th>Prix</th><th>Stock</th><th>Actif</th><th></th></tr></thead>
+      <thead><tr><th></th><th>Nom</th><th>SKU</th><th>Catégorie</th><th>Prix</th><th>Stock</th><th>Poids</th><th>Actif</th><th></th></tr></thead>
       <tbody id="products-table-body"></tbody>
     </table>
   </div>
@@ -520,6 +525,8 @@
     const active = document.getElementById('p-active').value === 'true';
     const stockRaw = document.getElementById('p-stock').value.trim();
     const stock = stockRaw === '' ? null : Math.max(0, parseInt(stockRaw, 10));
+    const weightRaw = document.getElementById('p-weight').value.trim();
+    const weight = weightRaw === '' ? null : Math.max(0, parseFloat(weightRaw));
     const digitalFileUrl = document.getElementById('p-digital-file').value.trim();
     const taxCode = getSelectedTaxCode();
     const qstExempt = document.getElementById('p-qst-exempt').checked;
@@ -531,6 +538,7 @@
     if (isNaN(priceMajor) || priceMajor < 0) { toast('Le prix est invalide.'); return; }
     if (!category) { toast('Créez au moins une catégorie avant d\'ajouter un produit.'); return; }
     if (stockRaw !== '' && isNaN(stock)) { toast('Le stock doit être un nombre entier, ou vide pour illimité.'); return; }
+    if (weightRaw !== '' && isNaN(weight)) { toast('Le poids doit être un nombre, ou vide si non expédié.'); return; }
     if (sku && state.products.some((p) => p.sku === sku && p.id !== editingId)) {
       toast('Ce SKU est déjà utilisé par un autre produit.');
       return;
@@ -544,6 +552,7 @@
       product.description = description;
       product.active = active;
       product.stock = stock;
+      product.weight = weight;
       product.digitalFileUrl = digitalFileUrl || null;
       product.taxCode = taxCode || null;
       product.qstExempt = qstExempt;
@@ -563,6 +572,7 @@
         description,
         active,
         stock,
+        weight,
         digitalFileUrl: digitalFileUrl || null,
         taxCode: taxCode || null,
         qstExempt,
@@ -588,6 +598,7 @@
     document.getElementById('p-name').value = '';
     document.getElementById('p-price').value = '';
     document.getElementById('p-stock').value = '';
+    document.getElementById('p-weight').value = '';
     document.getElementById('p-digital-file').value = '';
     document.getElementById('p-tax-code').value = '';
     document.getElementById('p-tax-code-custom').value = '';
@@ -615,6 +626,7 @@
     document.getElementById('p-price').value = (p.price / 100).toFixed(2);
     document.getElementById('p-category').value = p.category;
     document.getElementById('p-stock').value = p.stock === null || p.stock === undefined ? '' : p.stock;
+    document.getElementById('p-weight').value = p.weight === null || p.weight === undefined ? '' : p.weight;
     document.getElementById('p-digital-file').value = p.digitalFileUrl || '';
     const taxSelect = document.getElementById('p-tax-code');
     const taxCustom = document.getElementById('p-tax-code-custom');
@@ -672,6 +684,7 @@
         '<td><span class="pill">' + escapeHtml(catNameById.get(p.category) || p.category) + '</span></td>' +
         '<td>' + formatPrice(p.price) + '</td>' +
         '<td>' + (p.stock === null || p.stock === undefined ? 'Illimité' : p.stock) + '</td>' +
+        '<td>' + (p.weight === null || p.weight === undefined ? '—' : p.weight + ' lb') + '</td>' +
         '<td>' + (p.active !== false ? 'Oui' : 'Non') + '</td>' +
         '<td class="actions"><button class="btn btn-outline btn-sm" data-action="edit">Modifier</button> <button class="btn btn-danger btn-sm" data-action="delete">Supprimer</button></td>';
       tr.querySelector('[data-action="edit"]').addEventListener('click', () => editProduct(p.id));
@@ -772,6 +785,7 @@
         image: imagePath,
         active: p.active !== false,
         stock: p.stock === null || p.stock === undefined ? null : p.stock,
+        weight: p.weight === null || p.weight === undefined ? null : p.weight,
         digitalFileUrl: p.digitalFileUrl || null,
         taxCode: p.taxCode || null,
         qstExempt: Boolean(p.qstExempt),
@@ -869,6 +883,7 @@
           category: p.category,
           active: p.active !== false,
           stock: p.stock === null || p.stock === undefined ? null : p.stock,
+          weight: p.weight === null || p.weight === undefined ? null : p.weight,
           digitalFileUrl: p.digitalFileUrl || null,
           taxCode: p.taxCode || null,
           qstExempt: Boolean(p.qstExempt),

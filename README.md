@@ -272,7 +272,7 @@ Le site d'origine d'une vente est enregistré automatiquement si le bloc d'inté
 
 ## 11. Étiquettes d'expédition
 
-`etiquettes/index.html` est un outil **local et autonome** (aucun lien avec Stripe ou Vercel pour l'instant) pour créer et imprimer des étiquettes 4"x6" sur une imprimante thermique (ex. NefLacca NL-N41, compatible Dymo).
+`etiquettes/index.html` est un outil **local** pour créer et imprimer des étiquettes 4"x6" sur une imprimante thermique (ex. NefLacca NL-N41, compatible Dymo). Il peut fonctionner seul, ou charger l'adresse et le poids directement depuis une commande de la boutique.
 
 **Important** : la mise en page reprend le **style** classique d'une étiquette de transporteur (bloc De/À, case service/poids, code-barres) mais n'utilise ni le logo ni les couleurs de marque d'UPS ou d'un autre transporteur — ce n'est pas une vraie étiquette UPS, il n'y a pas de numéro de suivi authentique ni de tarif calculé par un transporteur. Le champ « Transporteur » est un texte libre que vous remplissez vous-même.
 
@@ -285,9 +285,21 @@ Le site d'origine d'une vente est enregistré automatiquement si le bloc d'inté
 
 Vos profils expéditeur et le dernier destinataire saisi sont sauvegardés dans votre navigateur (pas besoin de tout retaper à chaque fois).
 
-### Prochaine étape prévue
+### Poids par produit (pour le calcul automatique)
 
-Pour l'instant, les informations du destinataire se saisissent manuellement. L'intégration avec les commandes de la boutique (pré-remplir automatiquement l'adresse collectée par Stripe) est prévue pour plus tard — dites-le-moi quand vous voudrez qu'on s'y attaque.
+Dans `admin/index.html`, chaque produit a un champ **« Poids (lb, si à expédier) »**. Un produit **sans poids renseigné** est considéré comme non expédié (téléchargement, service) — c'est ce champ qui fait la différence entre un produit à expédier et un produit téléchargeable, pas un champ séparé. Pour une commande avec plusieurs articles, les poids (poids unitaire × quantité) s'additionnent automatiquement.
+
+### Charger une commande depuis la boutique
+
+En haut du panneau « Destinataire », la section **« Charger depuis une commande Stripe »** permet de pré-remplir l'adresse et le poids total à partir d'une vraie commande :
+
+1. Renseignez l'**URL de l'API** et le **jeton admin** (les mêmes que dans `admin/index.html`, mémorisés dans votre navigateur).
+2. Trouvez l'**ID de session Stripe** de la commande (`cs_...`) — visible dans le Dashboard Stripe, ou dans la colonne « ID de commande » de l'export CSV des rapports de vente (section 10).
+3. Collez-le et cliquez **« Charger la commande »** : le nom, l'adresse, le téléphone et le poids total se remplissent automatiquement (la référence de l'étiquette devient l'ID de session, pour la traçabilité).
+
+Si la commande ne contient que des produits sans poids (numériques/services), un avertissement s'affiche — vous pouvez tout de même continuer manuellement si besoin.
+
+**Prochaine étape prévue** : un bouton direct « Créer l'étiquette » depuis l'admin ou un futur écran de commandes, pour éviter d'avoir à copier l'ID de session manuellement.
 
 ## Aller plus loin (suggestions restantes)
 

@@ -152,6 +152,22 @@
 
     <div class="panel">
       <h2>Destinataire</h2>
+
+      <div style="background:#f7f7fb; border:1px solid #e6e6ec; border-radius:8px; padding:10px 12px; margin-bottom:14px;">
+        <div style="font-size:12px; font-weight:700; margin-bottom:8px;">Charger depuis une commande Stripe (optionnel)</div>
+        <div class="row">
+          <div class="field"><label>URL de l'API</label><input type="text" id="order-api-url" placeholder="https://votre-projet.vercel.app"></div>
+          <div class="field"><label>Jeton admin</label><input type="text" id="order-api-token" placeholder="Votre jeton secret"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>ID de session Stripe (cs_...)</label><input type="text" id="order-session-id" placeholder="cs_..."></div>
+          <div class="field" style="max-width:140px; align-self:flex-end;">
+            <button class="btn-outline btn btn-sm" id="btn-load-order">Charger la commande</button>
+          </div>
+        </div>
+        <p class="no-print-hint" id="order-load-status" style="margin:6px 0 0;"></p>
+      </div>
+
       <div class="field"><label>Nom</label><input type="text" id="to-name"></div>
       <div class="row">
         <div class="field"><label>Adresse</label><input type="text" id="to-addr1"></div>
@@ -279,6 +295,65 @@
   });
 
   document.getElementById('btn-print').addEventListener('click', () => window.print());
+
+  // ---------- Chargement d'une commande Stripe ----------
+
+  const ORDER_API_KEY = 'etiquettes_order_api_config_v1';
+
+  (function restoreOrderApiConfig() {
+    try {
+      const cfg = JSON.parse(localStorage.getItem(ORDER_API_KEY)) || {};
+      if (cfg.baseUrl) set('order-api-url', cfg.baseUrl);
+      if (cfg.token) set('order-api-token', cfg.token);
+    } catch {}
+  })();
+
+  function saveOrderApiConfig() {
+    const cfg = {
+      baseUrl: val('order-api-url').replace(/\/+$/, ''),
+      token: val('order-api-token'),
+    };
+    localStorage.setItem(ORDER_API_KEY, JSON.stringify(cfg));
+    return cfg;
+  }
+
+  document.getElementById('btn-load-order').addEventListener('click', async () => {
+    const cfg = saveOrderApiConfig();
+    const sessionId = val('order-session-id');
+    const statusEl = document.getElementById('order-load-status');
+    if (!cfg.baseUrl || !cfg.token) { statusEl.textContent = 'Renseignez l\'URL de l\'API et le jeton admin.'; return; }
+    if (!sessionId) { statusEl.textContent = 'Collez l\'ID de session Stripe (cs_...).'; return; }
+
+    statusEl.textContent = 'Chargement...';
+    try {
+      const response = await fetch(cfg.baseUrl + '/api/order-shipping?sessionId=' + encodeURIComponent(sessionId), {
+        headers: { Authorization: 'Bearer ' + cfg.token },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erreur inconnue');
+
+      set('to-name', data.recipientName || '');
+      set('to-phone', data.phone || '');
+      if (data.address) {
+        set('to-addr1', data.address.line1 || '');
+        set('to-addr2', data.address.line2 || '');
+        set('to-city', data.address.city || '');
+        set('to-prov', data.address.state || '');
+        set('to-postal', data.address.postalCode || '');
+        set('to-country', (data.address.country || 'CA').toUpperCase());
+      }
+      set('reference', data.sessionId);
+      if (data.totalWeight > 0) set('weight', data.totalWeight + ' lb');
+
+      allFields.forEach((f) => document.getElementById(f).dispatchEvent(new Event('input')));
+
+      statusEl.textContent = data.hasShippableItems
+        ? ('Commande chargée — poids total : ' + data.totalWeight + ' lb.')
+        : 'Commande chargée — attention, aucun article de cette commande n\'a de poids renseigné (produit numérique/service ?).';
+    } catch (err) {
+      statusEl.textContent = 'Impossible de charger la commande : ' + err.message;
+    }
+  });
 
   function updateLabel() {
     document.getElementById('lbl-carrier').textContent = val('carrier-name') || 'EXPÉDITION';
