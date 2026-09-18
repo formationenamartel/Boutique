@@ -314,6 +314,18 @@
   </div>
 
   <div class="panel">
+    <h2>Commandes récentes</h2>
+    <p class="hint">Utilise la même URL d'API et le même jeton admin que les panneaux ci-dessus. Cliquez « Créer l'étiquette » pour ouvrir l'outil d'étiquettes (<code>etiquettes/index.html</code>) avec cette commande déjà chargée.</p>
+    <div class="row">
+      <button class="btn" id="btn-load-recent-orders">Charger les commandes récentes</button>
+    </div>
+    <table style="margin-top:14px;">
+      <thead><tr><th>Client</th><th>Montant</th><th>Date</th><th></th><th></th></tr></thead>
+      <tbody id="recent-orders-table-body"></tbody>
+    </table>
+  </div>
+
+  <div class="panel">
     <h2>Aperçu</h2>
     <div id="preview" class="boutique">
       <div class="boutique-grid" id="preview-grid"></div>
@@ -1029,6 +1041,44 @@
       toast('Ajustement impossible : ' + err.message);
     }
   }
+
+  // ---------- Commandes récentes ----------
+
+  document.getElementById('btn-load-recent-orders').addEventListener('click', async () => {
+    const config = saveApiConfig();
+    const tbody = document.getElementById('recent-orders-table-body');
+    if (!config.baseUrl || !config.token) { toast('Renseignez l\'URL de l\'API et le jeton admin.'); return; }
+
+    try {
+      const response = await fetch(config.baseUrl + '/api/recent-orders', {
+        headers: { Authorization: 'Bearer ' + config.token },
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Erreur inconnue');
+
+      if (data.orders.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="muted">Aucune commande payée trouvée.</td></tr>';
+      } else {
+        tbody.innerHTML = data.orders
+          .map((o) => {
+            const amount = new Intl.NumberFormat('fr-FR', { style: 'currency', currency: o.currency.toUpperCase() }).format(o.amountTotal / 100);
+            const date = new Date(o.date).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' });
+            const labelUrl = '../etiquettes/index.html?sessionId=' + encodeURIComponent(o.sessionId);
+            return '<tr>' +
+              '<td>' + escapeHtml(o.recipientName || 'Client') + '</td>' +
+              '<td>' + amount + '</td>' +
+              '<td class="muted">' + date + '</td>' +
+              '<td>' + (o.hasShipping ? '📦 À expédier' : '💾 Numérique') + '</td>' +
+              '<td><a class="btn btn-sm" href="' + labelUrl + '" target="_blank" rel="noopener" style="text-decoration:none; display:inline-block;">Créer l\'étiquette</a></td>' +
+              '</tr>';
+          })
+          .join('');
+      }
+      toast(data.orders.length + ' commande(s) chargée(s).');
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="5" class="muted">Erreur : ' + escapeHtml(err.message) + '</td></tr>';
+    }
+  });
 
   // ---------- Rapports de vente ----------
 

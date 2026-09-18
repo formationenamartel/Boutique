@@ -463,6 +463,14 @@
   restoreState();
   renderProfileSelect();
   updateLabel();
+
+  // Arrivee depuis l'admin (bouton "Creer l'etiquette") : ?sessionId=cs_... charge la commande
+  // automatiquement, a condition que l'URL de l'API et le jeton aient deja ete saisis une fois ici.
+  const sessionIdFromUrl = new URLSearchParams(window.location.search).get('sessionId');
+  if (sessionIdFromUrl) {
+    set('order-session-id', sessionIdFromUrl);
+    loadOrder(sessionIdFromUrl);
+  }
 })();
 </script>
 </body>
