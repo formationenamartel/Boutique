@@ -323,9 +323,9 @@ Par défaut, ça ouvre quand même la **boîte de dialogue d'impression standard
   2. Ouvrez **PowerShell en tant qu'administrateur** (clic droit sur le menu Démarrer → « Terminal (Admin) ») et exécutez, en ajustant le nom si besoin :
      ```powershell
      New-Item -Path "HKLM:\SOFTWARE\Policies\Google\Chrome" -Force
-     Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Google\Chrome" -Name "PrintingDefaultDestinationSelectionRules" -Value '{"kind":"local","namePattern":"NefLacca.*"}'
+     Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Google\Chrome" -Name "DefaultPrinterSelection" -Value '{"kind":"local","namePattern":"NefLacca.*"}'
      ```
-  3. Fermez complètement Chrome (toutes les fenêtres) puis rouvrez-le. Vérifiez via `chrome://policy` que `PrintingDefaultDestinationSelectionRules` apparaît sans erreur.
+  3. Fermez complètement Chrome (toutes les fenêtres) puis rouvrez-le. Vérifiez via `chrome://policy` que `DefaultPrinterSelection` apparaît sans erreur (état « OK »).
   4. Cette règle ne change que le choix pré-sélectionné dans les boîtes de dialogue d'impression de Chrome — l'imprimante par défaut de Windows (et donc votre logiciel de point de vente) reste complètement inchangée.
 
 **Étape 2 — créez un raccourci dédié** sur le Bureau (clic droit → Nouveau → Raccourci) avec cette cible (ajustez le chemin de Chrome et le chemin du dossier du projet si nécessaire) :
