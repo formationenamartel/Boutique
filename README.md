@@ -303,7 +303,28 @@ Dans les deux cas : le nom, l'adresse, le téléphone et le poids total se rempl
 
 Si la commande ne contient que des produits sans poids (numériques/services), un avertissement s'affiche — vous pouvez tout de même continuer manuellement si besoin.
 
-**Prochaine étape prévue** : un bouton direct « Créer l'étiquette » depuis l'admin ou un futur écran de commandes, pour éviter d'avoir à copier l'ID de session manuellement.
+### Depuis l'admin : « Commandes récentes » → « Créer l'étiquette »
+
+Dans `admin/index.html`, le panneau **« Commandes récentes »** (même URL d'API et jeton que les autres panneaux) liste vos dernières commandes payées avec un bouton **« Créer l'étiquette »** par commande. Ce bouton ouvre `etiquettes/index.html` dans un nouvel onglet avec la commande **déjà chargée automatiquement** (via `?sessionId=...` dans l'URL) — pas besoin de copier-coller l'ID de session, ni de recliquer sur « Charger la commande ».
+
+Note : la toute première fois que vous utilisez `etiquettes/index.html` (même via ce bouton), il faut renseigner une fois l'URL de l'API et le jeton admin dans son panneau « Destinataire » — ces informations sont mémorisées séparément de celles de `admin/index.html` dans votre navigateur.
+
+### Impression automatique (sans clic)
+
+Quand une commande est chargée automatiquement depuis l'admin (via `?sessionId=...`) **et** qu'elle contient au moins un produit à expédier, `etiquettes/index.html` déclenche l'impression toute seule, sans que vous ayez à cliquer sur « Imprimer l'étiquette ». (Pour désactiver ce comportement ponctuellement, ajoutez `&autoprint=0` à la fin de l'URL avant de l'ouvrir.)
+
+Par défaut, ça ouvre quand même la **boîte de dialogue d'impression standard du navigateur** — il reste un clic sur « Imprimer » à faire, par sécurité (Chrome ne permet pas d'imprimer silencieusement une page web ordinaire). Pour une impression **100 % silencieuse** (l'étiquette sort directement, sans aucune boîte de dialogue), il faut configurer Chrome en mode « impression kiosque », une fois :
+
+1. **Définissez votre imprimante NefLacca NL-N41 comme imprimante par défaut** dans Windows (Paramètres → Bluetooth et appareils → Imprimantes et scanners → sélectionnez-la → Définir par défaut).
+2. **Créez un raccourci dédié** sur le Bureau (clic droit → Nouveau → Raccourci) avec cette cible (ajustez le chemin de Chrome et le chemin du dossier du projet si nécessaire) :
+   ```
+   "C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing --user-data-dir="C:\ChromeImpressionSilencieuse" "file:///C:/Users/PC-Prod/Documents/Boutique%20en%20ligne%20CODE/admin/index.html"
+   ```
+   Le `--user-data-dir` crée un profil Chrome séparé dédié à ce raccourci — il ne touche pas à votre Chrome habituel et peut rester ouvert en même temps.
+3. **Utilisez toujours ce raccourci** (pas votre Chrome habituel) pour le flux admin → étiquette quand vous voulez l'impression silencieuse — les indicateurs de démarrage de Chrome (`--kiosk-printing`) ne s'appliquent qu'au processus lancé avec eux.
+4. La première étiquette imprimée dans ce profil dédié confirme que ça fonctionne (aucune boîte de dialogue, ça imprime directement sur la NefLacca). Chrome retient ensuite l'imprimante utilisée pour ce profil.
+
+⚠️ Comme il n'y a plus de boîte de dialogue de confirmation, vérifiez bien l'adresse et le poids affichés dans l'admin **avant** de cliquer « Créer l'étiquette », puisque l'impression partira automatiquement dès le chargement de la page.
 
 ## Aller plus loin (suggestions restantes)
 

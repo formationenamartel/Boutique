@@ -324,8 +324,8 @@
   async function loadOrder(sessionId) {
     const cfg = saveOrderApiConfig();
     const statusEl = document.getElementById('order-load-status');
-    if (!cfg.baseUrl || !cfg.token) { statusEl.textContent = 'Renseignez l\'URL de l\'API et le jeton admin.'; return; }
-    if (!sessionId) { statusEl.textContent = 'Collez l\'ID de session Stripe (cs_...).'; return; }
+    if (!cfg.baseUrl || !cfg.token) { statusEl.textContent = 'Renseignez l\'URL de l\'API et le jeton admin.'; return false; }
+    if (!sessionId) { statusEl.textContent = 'Collez l\'ID de session Stripe (cs_...).'; return false; }
 
     statusEl.textContent = 'Chargement...';
     try {
@@ -354,8 +354,10 @@
       statusEl.textContent = data.hasShippableItems
         ? ('Commande chargée — poids total : ' + data.totalWeight + ' lb.')
         : 'Commande chargée — attention, aucun article de cette commande n\'a de poids renseigné (produit numérique/service ?).';
+      return data.hasShippableItems;
     } catch (err) {
       statusEl.textContent = 'Impossible de charger la commande : ' + err.message;
+      return false;
     }
   }
 
@@ -466,10 +468,17 @@
 
   // Arrivee depuis l'admin (bouton "Creer l'etiquette") : ?sessionId=cs_... charge la commande
   // automatiquement, a condition que l'URL de l'API et le jeton aient deja ete saisis une fois ici.
-  const sessionIdFromUrl = new URLSearchParams(window.location.search).get('sessionId');
+  // Si la commande se charge avec une adresse valide, l'etiquette s'imprime aussi automatiquement
+  // (ajoutez &autoprint=0 a l'URL pour desactiver ce comportement au besoin).
+  const urlParams = new URLSearchParams(window.location.search);
+  const sessionIdFromUrl = urlParams.get('sessionId');
   if (sessionIdFromUrl) {
     set('order-session-id', sessionIdFromUrl);
-    loadOrder(sessionIdFromUrl);
+    loadOrder(sessionIdFromUrl).then((hasShippableItems) => {
+      if (hasShippableItems && urlParams.get('autoprint') !== '0') {
+        setTimeout(() => window.print(), 200);
+      }
+    });
   }
 })();
 </script>
