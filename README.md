@@ -320,23 +320,28 @@ Par défaut, ça ouvre quand même la **boîte de dialogue d'impression standard
 - **Si la NefLacca peut être l'imprimante par défaut de Windows sans problème** : Paramètres → Bluetooth et appareils → Imprimantes et scanners → sélectionnez la NefLacca → Définir par défaut. C'est tout, passez à l'étape 2.
 - **Si un autre logiciel (ex. point de vente) a besoin d'une imprimante par défaut différente** : ne touchez pas à l'imprimante par défaut de Windows. À la place, indiquez la NefLacca uniquement à Chrome via une politique dédiée, qui n'affecte rien d'autre sur votre ordinateur :
   1. Notez le nom exact de la NefLacca dans Windows (Paramètres → Imprimantes et scanners).
-  2. Ouvrez **PowerShell en tant qu'administrateur** (clic droit sur le menu Démarrer → « Terminal (Admin) ») et exécutez, en ajustant le nom si besoin :
+  2. Ouvrez **PowerShell en tant qu'administrateur** (clic droit sur le menu Démarrer → « Terminal (Admin) ») et exécutez, en remplaçant `NL-N41` par le nom exact trouvé à l'étape précédente si besoin (ex. via `Get-Printer | Select-Object Name`) :
      ```powershell
      New-Item -Path "HKLM:\SOFTWARE\Policies\Google\Chrome" -Force
-     Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Google\Chrome" -Name "DefaultPrinterSelection" -Value '{"kind":"local","namePattern":"NefLacca.*"}'
+     Set-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Google\Chrome" -Name "DefaultPrinterSelection" -Value '{"kind":"local","namePattern":"NL-N41"}'
      ```
+     Attention : `namePattern` est une expression régulière qui doit correspondre au nom **exact** de l'imprimante tel qu'enregistré dans Windows (pas forcément « NefLacca » — sur certaines installations, seul le modèle comme `NL-N41` apparaît).
   3. Fermez complètement Chrome (toutes les fenêtres) puis rouvrez-le. Vérifiez via `chrome://policy` que `DefaultPrinterSelection` apparaît sans erreur (état « OK »).
   4. Cette règle ne change que le choix pré-sélectionné dans les boîtes de dialogue d'impression de Chrome — l'imprimante par défaut de Windows (et donc votre logiciel de point de vente) reste complètement inchangée.
 
-**Étape 2 — créez un raccourci dédié** sur le Bureau (clic droit → Nouveau → Raccourci) avec cette cible (ajustez le chemin de Chrome et le chemin du dossier du projet si nécessaire) :
+**Étape 2 — créez un raccourci dédié** sur le Bureau (clic droit → Nouveau → Raccourci) avec cette cible (ajustez le chemin de Chrome — vérifiez s'il est dans `Program Files` ou `Program Files (x86)` selon votre installation — et le chemin du dossier du projet si nécessaire) :
 ```
-"C:\Program Files\Google\Chrome\Application\chrome.exe" --kiosk-printing --user-data-dir="C:\ChromeImpressionSilencieuse" "file:///C:/Users/PC-Prod/Documents/Boutique%20en%20ligne%20CODE/admin/index.html"
+"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --kiosk --kiosk-printing --user-data-dir="C:\ChromeImpressionSilencieuse" "file:///C:/Users/PC-Prod/Documents/Boutique%20en%20ligne%20CODE/admin/index.html"
 ```
 Le `--user-data-dir` crée un profil Chrome séparé dédié à ce raccourci — il ne touche pas à votre Chrome habituel et peut rester ouvert en même temps.
 
-**Étape 3 — utilisez toujours ce raccourci** (pas votre Chrome habituel) pour le flux admin → étiquette quand vous voulez l'impression silencieuse — le drapeau `--kiosk-printing` ne s'applique qu'au processus lancé avec lui.
+⚠️ **`--kiosk-printing` seul ne suffit pas** — Chrome affiche quand même la boîte de dialogue sans le drapeau `--kiosk` (plein écran complet) en plus. C'est le compromis pour une impression vraiment silencieuse : cette fenêtre Chrome dédiée tourne en plein écran, sans barre d'adresse ni onglets visibles. Pour la fermer ou basculer vers une autre fenêtre : **Alt+F4** ou **Alt+Tab**.
 
-**Étape 4** — la première étiquette imprimée dans ce profil dédié confirme que ça fonctionne (aucune boîte de dialogue, ça imprime directement sur la NefLacca).
+**Étape 3 — première utilisation du profil dédié :** ce profil Chrome étant séparé de votre navigateur habituel, il faut remplacer une fois l'URL de l'API et le jeton admin, aux deux endroits (leur mémoire est indépendante l'une de l'autre) :
+- Dans l'admin (panneau « Stock en ligne »).
+- Dans `etiquettes/index.html` (panneau « Destinataire » → « Charger depuis une commande Stripe »).
+
+**Étape 4 — utilisez toujours ce raccourci** (pas votre Chrome habituel) pour le flux admin → étiquette quand vous voulez l'impression silencieuse — les drapeaux `--kiosk`/`--kiosk-printing` ne s'appliquent qu'au processus lancé avec eux ; si Chrome tournait déjà en arrière-plan (même une fenêtre normale), Windows se contente de transmettre l'URL à ce processus existant en ignorant les drapeaux. En cas de doute, fermez tout Chrome via le Gestionnaire des tâches avant de relancer le raccourci.
 
 ⚠️ Comme il n'y a plus de boîte de dialogue de confirmation, vérifiez bien l'adresse et le poids affichés dans l'admin **avant** de cliquer « Créer l'étiquette », puisque l'impression partira automatiquement dès le chargement de la page.
 
