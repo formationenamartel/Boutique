@@ -264,6 +264,12 @@
       })
       .then((data) => {
         catalog = data;
+        // Les chemins d'image du catalogue ("images/x.jpg") sont relatifs a products.json,
+        // pas a la page qui integre le widget (souvent sur un autre domaine).
+        const catalogBase = new URL(productsUrl, document.baseURI);
+        (catalog.products || []).forEach((p) => {
+          if (p.image) p.image = new URL(p.image, catalogBase).href;
+        });
         renderCategories();
         renderGrid();
         updateCartCount();
