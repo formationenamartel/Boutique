@@ -112,7 +112,8 @@ export default async function handler(req, res) {
       success_url: finalSuccessUrl,
       cancel_url: finalCancelUrl,
       allow_promotion_codes: true,
-      metadata: sanitizedSiteId ? { siteId: sanitizedSiteId } : undefined,
+      // source : reconnaitre nos sessions dans le webhook (compte Stripe partage avec d'autres projets)
+      metadata: sanitizedSiteId ? { source: 'boutique', siteId: sanitizedSiteId } : { source: 'boutique' },
       expires_at: reservedItems.length > 0 ? Math.floor(Date.now() / 1000) + RESERVATION_WINDOW_SECONDS : undefined,
       // Adresse de livraison demandee automatiquement si le panier contient un article avec
       // un poids (donc a expedier) - inutile de demander une adresse pour un panier 100% numerique.

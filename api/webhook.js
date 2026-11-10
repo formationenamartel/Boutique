@@ -73,6 +73,15 @@ async function handleDigitalDelivery(session, host) {
   }
 }
 
+// Le compte Stripe est partage avec d'autres projets (Planifecto, Ecrans Multiples) : ce webhook recoit aussi
+// leurs paiements. On ne traite que les sessions de la boutique : marquees source=boutique, ou (anciennes sessions)
+// en mode paiement unique sans les metadonnees des autres projets.
+function isBoutiqueSession(session) {
+  const m = session.metadata || {};
+  if (m.source) return m.source === 'boutique';
+  return session.mode === 'payment' && !m.business_id && !m.kind && !m.accountId;
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     res.status(405).end();
@@ -92,6 +101,12 @@ export default async function handler(req, res) {
     event = stripe.webhooks.constructEvent(rawBody, req.headers['stripe-signature'], webhookSecret);
   } catch (err) {
     res.status(400).send(`Signature webhook invalide : ${err.message}`);
+    return;
+  }
+
+  // Paiement d'un autre projet du meme compte Stripe : rien a faire ici
+  if (event.type.startsWith('checkout.session.') && !isBoutiqueSession(event.data.object)) {
+    res.status(200).json({ received: true, ignored: true });
     return;
   }
 
